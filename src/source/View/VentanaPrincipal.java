@@ -1,20 +1,34 @@
-package source;
+package source.View;
 
 import javax.swing.*;
+
+import source.AlgoritmosGeneticos.AlgoritmoGenetico;
+import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
+import source.Camaras.Camara;
+import source.Camaras.CamaraReal;
+import source.Escenarios.EscenarioDatos;
+import source.Escenarios.EscenariosFactory;
+import source.Individuos.Individuo;
+import source.Individuos.IndividuoReal;
+import source.View.*;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import java.util.List;
 
 public class VentanaPrincipal extends JFrame {
 
     private JPanel contentPane;
-    private PanelMapa panelMapa;
+    private PanelMapaReal panelMapa;
     private JButton btnEjecutar;
     private JCheckBox chckbxPonderado;
     private JComboBox<String> comboEscenario;
     private JRadioButton rdbtnNormal, rdbtnReal;
     private JTextArea textAreaResultados;
+    private JSpinner spinnerGeneraciones;
 
+    private IndividuoReal mejorAbsolutoReal = null;
     private Individuo mejorAbsoluto = null;
     private double mejorFitnessAbsoluto = -1;
 
@@ -56,14 +70,24 @@ public class VentanaPrincipal extends JFrame {
 
         contentPane.add(rdbtnNormal);
         contentPane.add(rdbtnReal);
-
+        
+        // JSpinner numGeneraciones
+        JLabel labelGeneraciones = new JLabel("Generaicones: ");
+        labelGeneraciones.setBounds(610, 45, 40, 25);
+        contentPane.add(labelGeneraciones);
+        // Modelo: valor inicial 500, mínimo 1, máximo 5000, paso de 50
+        SpinnerNumberModel modeloGens = new SpinnerNumberModel(500, 1, 5000, 50);
+        spinnerGeneraciones = new JSpinner(modeloGens);
+        spinnerGeneraciones.setBounds(655, 45, 70, 25);
+        contentPane.add(spinnerGeneraciones);
+        
         // ===== BOTÓN EJECUTAR =====
         btnEjecutar = new JButton("Ejecutar AG");
         btnEjecutar.setBounds(610, 15, 150, 25);
         contentPane.add(btnEjecutar);
 
         // ===== MAPA =====
-        panelMapa = new PanelMapa();
+        panelMapa = new PanelMapaReal();
         panelMapa.setBounds(20, 60, 350, 350);
         panelMapa.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         contentPane.add(panelMapa);
@@ -85,7 +109,44 @@ public class VentanaPrincipal extends JFrame {
      * Decide si usar modo normal o real según el radioButton.
      */
     private void ejecutarAG(ActionEvent e) {
+    	
+    	new Thread(() -> {
+            btnEjecutar.setEnabled(false); // Desactivar botón mientras corre
 
+            int escenario = comboEscenario.getSelectedIndex();
+            EscenarioDatos datos = EscenariosFactory.cargar(escenario);
+            panelMapa.setMapa(datos.mapa, datos.importancia);
+
+            boolean ponderado = chckbxPonderado.isSelected();
+            int numGens = (int) spinnerGeneraciones.getValue();
+
+            if (rdbtnReal.isSelected()) {
+                ejecutarAGReal(datos, ponderado, numGens);
+            } else {
+            	// Usamos datos.mapaObj para obtener la matriz de obstáculos real
+                // y pasamos 'this' para la animación
+            	AlgoritmoGenetico ag = new AlgoritmoGenetico(
+                        (Mapa) datos.mapaObj, 
+                        datos.rango, 
+                        datos.numCamaras, 
+                        this
+                );
+            	
+                ag.setModoPonderado(ponderado);
+                if (ponderado) ag.setImportancia(datos.importancia);
+                
+                Individuo candidato = ag.ejecutar(numGens, 0.15);
+                mostrarResultados(candidato);
+            }
+
+            btnEjecutar.setEnabled(true); // Reactivar al terminar
+        }).start();
+    	
+    	/*
+    	this.mejorAbsoluto = null;
+    	this.mejorFitnessAbsoluto = -1;
+    	int numGens = (int) spinnerGeneraciones.getValue();
+    	
         int escenario = comboEscenario.getSelectedIndex();
         EscenarioDatos datos = EscenariosFactory.cargar(escenario);
 
@@ -95,50 +156,80 @@ public class VentanaPrincipal extends JFrame {
         boolean modoReal = rdbtnReal.isSelected();
 
         if (modoReal) {
-            ejecutarAGReal(datos, ponderado);
+            ejecutarAGReal(datos, ponderado, numGens);
         } else {
-            ejecutarAGNormal(datos, ponderado);
+            ejecutarAGNormal(datos, ponderado, numGens);
         }
+        */
     }
 
     /**
      * Ejecución del AG normal (V1)
      */
-    private void ejecutarAGNormal(EscenarioDatos datos, boolean ponderado) {
-
+    private void ejecutarAGNormal(EscenarioDatos datos, boolean ponderado, int generaciones) {
         AlgoritmoGenetico ag = new AlgoritmoGenetico(
                 datos.mapaObj,
                 datos.rango,
-                datos.numCamaras
+                datos.numCamaras,
+                this
         );
         ag.setModoPonderado(ponderado);
         if (ponderado) ag.setImportancia(datos.importancia);
 
-        Individuo candidato = ag.ejecutar(200, 0.15);
-
-        mostrarResultados(candidato);
-    }
+        Individuo candidato = ag.ejecutar(generaciones, 0.15);
+        // PAra asegurar que los resultados finales se impriman en el textArea
+        SwingUtilities.invokeLater(() -> {
+            mostrarResultados(candidato);
+        });    }
 
     /**
      * Ejecución del AG real (V2 con cámaras orientables)
      * Aquí se llama a tu AlgoritmoGeneticoReal
      */
-    private void ejecutarAGReal(EscenarioDatos datos, boolean ponderado) {
+    private void ejecutarAGReal(EscenarioDatos datos, boolean ponderado, int generaciones) {
+    	Mapa mapaActual = (Mapa) datos.mapaObj;
 
         AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(
-                datos.mapaObj,
+                mapaActual,       // Usamos el mapa cargado, no uno fijo
                 datos.rango,
                 datos.numCamaras,
-                60.0 // ángulo de apertura por defecto
+                60.0,             // Apertura
+                this              // Pasamos la ventana para la animación
         );
         agReal.setModoPonderado(ponderado);
         if (ponderado) agReal.setImportancia(datos.importancia);
 
-        IndividuoReal candidato = agReal.ejecutar(200, 0.15);
-
-        mostrarResultadosReal(candidato);
+        IndividuoReal candidato = agReal.ejecutar(generaciones, 0.15);
+        mostrarResultadosReal(candidato, datos.rango, 60.0);
     }
 
+    /*
+    	Actualizar el mapa para ir mostrando como cambian las camaras
+    */
+    public void actualizarMapaEnTiempoReal(Individuo ind, int gen) {
+        SwingUtilities.invokeLater(() -> {
+        	panelMapa.setCamaras(convertirACamarasReales(ind.camaras), 1, 0);
+        	panelMapa.repaint();
+            // Opcional: mostrar progreso en el título o un label
+            setTitle("Generación: " + gen + " | Mejor Fitness: " + ind.fitness);
+        });
+    }
+    
+    private List<CamaraReal> convertirACamarasReales(List<Camara> normales) {
+        List<CamaraReal> lista = new java.util.ArrayList<>();
+        for (Camara c : normales) {
+            lista.add(new CamaraReal(c.x, c.y, 0)); // θ=0 y apertura será 360
+        }
+        return lista;
+    }
+
+	public void actualizarMapaRealEnTiempoReal(List<CamaraReal> camaras, int gen, double fitness, int rango, double apertura) {
+        SwingUtilities.invokeLater(() -> {
+            panelMapa.setCamaras(camaras, rango, apertura);
+            setTitle("Generación: " + gen + " | Fitness: " + fitness);
+        });
+    }
+    
     /**
      * Mostrar resultados del AG normal
      */
@@ -155,13 +246,13 @@ public class VentanaPrincipal extends JFrame {
                 textAreaResultados.append("Cámara en (" + c.x + "," + c.y + ")\n");
             }
 
-            panelMapa.setCamaras(mejorAbsoluto.camaras);
+            panelMapa.setCamaras(convertirACamarasReales(mejorAbsoluto.camaras), 1, 0);
         }
     }
 
     /**
      * Mostrar resultados del AG real
-     */
+     * 
     private void mostrarResultadosReal(IndividuoReal candidato) {
         if (mejorAbsoluto == null || candidato.fitness > mejorFitnessAbsoluto) {
             mejorFitnessAbsoluto = candidato.fitness;
@@ -190,7 +281,26 @@ public class VentanaPrincipal extends JFrame {
             panelMapa.setCamaras(mejorAbsoluto.camaras);
         }
     }
+     */
+    private void mostrarResultadosReal(IndividuoReal candidato, int rango, double apertura) {
+        if (mejorAbsolutoReal == null || candidato.fitness > mejorFitnessAbsoluto) {
+            mejorFitnessAbsoluto = candidato.fitness;
+            mejorAbsolutoReal = candidato; // Guardamos el objeto REAL, no el redondeado
 
+            textAreaResultados.setText("");
+            textAreaResultados.append("=== MEJOR SOLUCIÓN REAL ===\n");
+            textAreaResultados.append(String.format("Fitness: %.4f\n\n", candidato.fitness));
+
+            for (int i = 0; i < candidato.camaras.size(); i++) {
+                CamaraReal c = candidato.camaras.get(i);
+                textAreaResultados.append(String.format("Cámara %d: (%.2f, %.2f) θ: %.1f°\n", 
+                                          (i+1), c.x, c.y, c.theta));
+            }
+
+            // Actualizamos el panel con los datos EXACTOS
+            panelMapa.setCamaras(candidato.camaras, rango, apertura);
+        }
+    }
     private void cargarEscenario(int idx) {
         EscenarioDatos d = EscenariosFactory.cargar(idx);
         panelMapa.setMapa(d.mapa, d.importancia);

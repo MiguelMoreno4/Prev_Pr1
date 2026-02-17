@@ -1,4 +1,4 @@
-package source;
+package source.View;
 
 public class Mapa {
     public int filas;

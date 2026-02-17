@@ -1,7 +1,10 @@
-package source;
+package source.Individuos;
 
 import java.util.ArrayList;
 import java.util.Random;
+
+import source.Camaras.Camara;
+import source.View.Mapa;
 
 public class Individuo {
 
@@ -23,12 +26,12 @@ public class Individuo {
         return nuevo;
     }
 
-    // Mutación: mueve una cámara aleatoriamente
+    // Mutaciï¿½n: mueve una cï¿½mara aleatoriamente
     public void mutar(Mapa mapa) {
     	Random rnd = new Random();
         int idx = rnd.nextInt(camaras.size());
 
-        // mover la cámara completamente
+        // mover la cï¿½mara completamente
         int x, y;
         do {
             x = rnd.nextInt(mapa.columnas);

@@ -1,4 +1,4 @@
-package source;
+package source.Camaras;
 
 public class CamaraReal {
     public double x;

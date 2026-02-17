@@ -1,6 +1,8 @@
-package source;
+package source.Individuos;
 
 import java.util.ArrayList;
+
+import source.Camaras.CamaraReal;
 
 public class IndividuoReal {
     public ArrayList<CamaraReal> camaras;

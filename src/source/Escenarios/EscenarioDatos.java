@@ -1,4 +1,6 @@
-package source;
+package source.Escenarios;
+
+import source.View.Mapa;
 
 public class EscenarioDatos {
     public int[][] mapa;

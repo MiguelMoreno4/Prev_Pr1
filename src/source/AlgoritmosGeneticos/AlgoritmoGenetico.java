@@ -1,6 +1,11 @@
-package source;
+package source.AlgoritmosGeneticos;
 
 import java.util.*;
+
+import source.Camaras.Camara;
+import source.Individuos.Individuo;
+import source.View.Mapa;
+import source.View.VentanaPrincipal;
 
 public class AlgoritmoGenetico {
 
@@ -10,18 +15,23 @@ public class AlgoritmoGenetico {
     private Random rnd = new Random();
     private boolean modoPonderado = false;
     private int[][] importancia;
+    private VentanaPrincipal ventana;
     
-    public AlgoritmoGenetico(Mapa mapa, int rango, int numCamaras) {
+    public AlgoritmoGenetico(Mapa mapa, int rango, int numCamaras, VentanaPrincipal ventana) {
         this.mapa = mapa;
         this.rango = rango;
         this.numCamaras = numCamaras;
+        this.ventana = ventana;
     }
+    
     public void setModoPonderado(boolean ponderado) {
         this.modoPonderado = ponderado;
     }
+    
     public void setImportancia(int[][] importancia) {
         this.importancia = importancia;
     }
+    
     // ===============================
     // EJECUTAR AG
     // ===============================
@@ -55,6 +65,16 @@ public class AlgoritmoGenetico {
             if (elite.fitness > mejorGlobal.fitness) {
                 mejorGlobal = copiarIndividuo(elite);
             }
+            
+            if (ventana != null) {
+                ventana.actualizarMapaEnTiempoReal(elite, g);
+                try {
+                    // Pausa para que el ojo humano pueda ver el movimiento
+                    Thread.sleep(3); 
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             ArrayList<Individuo> nueva = new ArrayList<>();
             nueva.add(copiarIndividuo(elite)); // elitismo real
@@ -67,7 +87,8 @@ public class AlgoritmoGenetico {
                     mutar(hijo);
                 }
 
-                hijo.fitness = calcularFitness(hijo);
+                hijo.fitness = modoPonderado ? calcularFitnessPonderado(hijo) : calcularFitness(hijo);                
+                
                 nueva.add(hijo);
             }
 
@@ -130,9 +151,16 @@ public class AlgoritmoGenetico {
     public int calcularFitness(Individuo ind) {
 
         HashSet<String> vigiladas = new HashSet<>();
-
+        int penalizacion = 0;
+        
         for (Camara c : ind.camaras) {
-
+        	
+        	if (mapa.obstaculos[c.y][c.x] == 1) {
+        		penalizacion += 100;
+        		continue;
+        	}
+        	
+        	
             if (mapa.esObstaculo(c.x, c.y)) continue;
 
             vigiladas.add(c.x + "," + c.y);
@@ -154,7 +182,7 @@ public class AlgoritmoGenetico {
             }
         }
 
-        return vigiladas.size();
+        return vigiladas.size() - penalizacion;
     }
 
     public int calcularFitnessPonderado(Individuo ind) {
