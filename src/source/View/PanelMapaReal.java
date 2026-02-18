@@ -78,29 +78,66 @@ public class PanelMapaReal extends JPanel {
     /**
      * TU LÓGICA ORIGINAL DE LOS ARCHIVOS .ZIP
      */
+    /**
+     * LÓGICA PARA EL GENÉTICO REAL (AHORA CON DETECCIÓN DE MUROS)
+     */
     private void dibujarCamarasReal(Graphics2D g2, int cellSize) {
         for (CamaraReal c : camaras) {
+            // Posición exacta en píxeles (centro de la celda de la cámara)
             int cx = (int) (c.x * cellSize + (cellSize / 2.0));
             int cy = (int) (c.y * cellSize + (cellSize / 2.0));
-            int r = cellSize / 3;
-
-            // --- A. CONO DE VISIÓN (Fiel a tus archivos) ---
-            g2.setColor(new Color(0, 120, 255, 60)); // Azul translúcido
             int radioVisionPixeles = rango * cellSize;
-            int angInicio = (int) (c.theta - apertura / 2);
+
+            // --- CREACIÓN DE LA MÁSCARA DE VISIÓN PRECISA ---
+            Polygon mascara = new Polygon();
+            mascara.addPoint(cx, cy);
             
+            double angInicio = c.theta - (apertura / 2.0);
+            
+            // Afinamos a 0.5 grados para evitar huecos en la distancia
+            for (double a = 0; a <= apertura; a += 0.5) {
+                double rad = Math.toRadians(angInicio + a);
+                double dFinal = rango;
+                
+                // Afinamos el paso de distancia a 0.1 para no "saltar" muros estrechos
+                for (double d = 0; d <= rango; d += 0.1) {
+                    // Calculamos la posición en coordenadas de matriz (celdas)
+                    int nx = (int) (c.x + Math.cos(rad) * d + 0.5); // +0.5 para redondeo correcto
+                    int ny = (int) (c.y + Math.sin(rad) * d + 0.5);
+
+                    // Comprobación de límites y muros
+                    if (nx < 0 || nx >= mapa[0].length || ny < 0 || ny >= mapa.length || mapa[ny][nx] == 1) {
+                        dFinal = d;
+                        break;
+                    }
+                }
+                
+                // Añadimos el punto al polígono de recorte
+                int px = (int) (cx + Math.cos(rad) * dFinal * cellSize);
+                int py = (int) (cy + Math.sin(rad) * dFinal * cellSize);
+                mascara.addPoint(px, py);
+            }
+
+            // --- DIBUJO CON CLIP (TU VISTA ORIGINAL) ---
+            Shape clipOriginal = g2.getClip();
+            g2.setClip(mascara);
+
+            g2.setColor(new Color(0, 120, 255, 60)); // Tu azul original
+            // Importante: Usamos los mismos ángulos que en tu fillArc original
             g2.fillArc(cx - radioVisionPixeles, cy - radioVisionPixeles,
                        radioVisionPixeles * 2, radioVisionPixeles * 2,
-                       -angInicio, (int)-apertura);
+                       (int)-(c.theta - apertura / 2), (int)-apertura);
 
-            // --- B. CUERPO DE LA CÁMARA (Fiel a tus archivos) ---
+            g2.setClip(clipOriginal);
+
+            // --- CUERPO DE LA CÁMARA (TU CÓDIGO ORIGINAL) ---
+            int r = cellSize / 3;
             g2.setColor(Color.BLUE);
             g2.fillOval(cx - r, cy - r, r * 2, r * 2);
             g2.setColor(Color.WHITE);
             g2.drawOval(cx - r, cy - r, r * 2, r * 2);
         }
     }
-
     /**
      * NUEVA FUNCIÓN PARA EL GENÉTICO NORMAL (ILUMINACIÓN CON MUROS)
      */
