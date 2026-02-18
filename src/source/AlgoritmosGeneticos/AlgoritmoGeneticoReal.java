@@ -55,13 +55,27 @@ public class AlgoritmoGeneticoReal {
 
             // Ordenar por fitness descendente
             poblacion.sort((a, b) -> Double.compare(b.fitness, a.fitness));
+         
+            //para la grafica
+            double mejorGeneracion = poblacion.get(0).fitness;
 
+            double mediaGen = 0;
+            for (IndividuoReal ind : poblacion)
+                mediaGen += ind.fitness;
+            mediaGen /= poblacion.size();
             IndividuoReal elite = copiarIndividuo(poblacion.get(0));
 
             if (elite.fitness > mejorGlobal.fitness) {
                 mejorGlobal = copiarIndividuo(elite);
             }
-            
+            //envio los datos a la grafica
+            if (ventana != null) {
+                ventana.actualizarGrafica(
+                        mejorGeneracion,
+                        mejorGlobal.fitness,
+                        mediaGen
+                );
+            }
             if (ventana != null && g % 5 == 0) { 
                 // PASAMOS: elite.camaras (que es la List<CamaraReal>)
             	ventana.actualizarMapaRealEnTiempoReal(

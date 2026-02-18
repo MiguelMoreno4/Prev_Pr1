@@ -27,7 +27,9 @@ public class VentanaPrincipal extends JFrame {
     private JRadioButton rdbtnNormal, rdbtnReal;
     private JTextArea textAreaResultados;
     private JSpinner spinnerGeneraciones;
-
+    
+    private PanelGrafica panelGrafica;
+    
     private IndividuoReal mejorAbsolutoReal = null;
     private Individuo mejorAbsoluto = null;
     private double mejorFitnessAbsoluto = -1;
@@ -36,7 +38,7 @@ public class VentanaPrincipal extends JFrame {
 
         setTitle("Optimización de Cámaras - AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 820, 520);
+        setBounds(100, 100, 820, 600);
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
@@ -91,6 +93,12 @@ public class VentanaPrincipal extends JFrame {
         panelMapa.setBounds(20, 60, 350, 350);
         panelMapa.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         contentPane.add(panelMapa);
+        
+        //Grafico
+        panelGrafica = new PanelGrafica();
+        panelGrafica.setBounds(20, 420, 760, 120);
+        panelGrafica.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        contentPane.add(panelGrafica);
 
         // ===== RESULTADOS =====
         textAreaResultados = new JTextArea();
@@ -111,6 +119,7 @@ public class VentanaPrincipal extends JFrame {
     private void ejecutarAG(ActionEvent e) {
     	
     	new Thread(() -> {
+    		 panelGrafica.limpiar();
             btnEjecutar.setEnabled(false); // Desactivar botón mientras corre
 
             int escenario = comboEscenario.getSelectedIndex();
@@ -313,6 +322,11 @@ public class VentanaPrincipal extends JFrame {
         }
         copia.fitness = ind.fitness;
         return copia;
+    }
+    public void actualizarGrafica(double mejorGen, double mejorAbs, double media) {
+        SwingUtilities.invokeLater(() -> {
+            panelGrafica.agregarDatos(mejorGen, mejorAbs, media);
+        });
     }
 
     public static void main(String[] args) {
