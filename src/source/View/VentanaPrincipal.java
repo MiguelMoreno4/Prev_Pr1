@@ -21,6 +21,7 @@ public class VentanaPrincipal extends JFrame {
 
     private JPanel contentPane;
     private PanelMapaReal panelMapa;
+    private PanelMapaReal panelMapaMejor;
     private JButton btnEjecutar;
     private JCheckBox chckbxPonderado;
     private JComboBox<String> comboEscenario;
@@ -38,7 +39,7 @@ public class VentanaPrincipal extends JFrame {
 
         setTitle("Optimización de Cámaras - AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 820, 600);
+        setBounds(100, 100, 1200, 650);
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
@@ -75,12 +76,12 @@ public class VentanaPrincipal extends JFrame {
         
         // JSpinner numGeneraciones
         JLabel labelGeneraciones = new JLabel("Generaicones: ");
-        labelGeneraciones.setBounds(610, 45, 40, 25);
+        labelGeneraciones.setBounds(900, 15, 40, 25);
         contentPane.add(labelGeneraciones);
         // Modelo: valor inicial 500, mínimo 1, máximo 5000, paso de 50
         SpinnerNumberModel modeloGens = new SpinnerNumberModel(500, 1, 5000, 50);
         spinnerGeneraciones = new JSpinner(modeloGens);
-        spinnerGeneraciones.setBounds(655, 45, 70, 25);
+        spinnerGeneraciones.setBounds(940, 15, 70, 25);
         contentPane.add(spinnerGeneraciones);
         
         // ===== BOTÓN EJECUTAR =====
@@ -93,6 +94,11 @@ public class VentanaPrincipal extends JFrame {
         panelMapa.setBounds(20, 60, 350, 350);
         panelMapa.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         contentPane.add(panelMapa);
+     // ===== MAPA MEJOR SOLUCIÓN =====
+        panelMapaMejor = new PanelMapaReal();
+        panelMapaMejor.setBounds(760, 60, 350, 350);
+        panelMapaMejor.setBorder(BorderFactory.createTitledBorder("Mejor solución"));
+        contentPane.add(panelMapaMejor);
         
         //Grafico
         panelGrafica = new PanelGrafica();
@@ -104,7 +110,7 @@ public class VentanaPrincipal extends JFrame {
         textAreaResultados = new JTextArea();
         textAreaResultados.setEditable(false);
         JScrollPane scroll = new JScrollPane(textAreaResultados);
-        scroll.setBounds(400, 60, 380, 350);
+        scroll.setBounds(390, 60, 350, 350);
         contentPane.add(scroll);
 
         btnEjecutar.addActionListener(this::ejecutarAG);
@@ -255,7 +261,13 @@ public class VentanaPrincipal extends JFrame {
                 textAreaResultados.append("Cámara en (" + c.x + "," + c.y + ")\n");
             }
 
-            panelMapa.setCamaras(convertirACamarasReales(mejorAbsoluto.camaras), 1, 0);
+            //panelMapa.setCamaras(convertirACamarasReales(mejorAbsoluto.camaras), 1, 0);
+            panelMapaMejor.setCamaras(
+            	    convertirACamarasReales(mejorAbsoluto.camaras),
+            	    1,
+            	    0
+            	);
+            	panelMapaMejor.repaint();
         }
     }
 
@@ -307,12 +319,16 @@ public class VentanaPrincipal extends JFrame {
             }
 
             // Actualizamos el panel con los datos EXACTOS
-            panelMapa.setCamaras(candidato.camaras, rango, apertura);
+           // panelMapa.setCamaras(candidato.camaras, rango, apertura);
+            panelMapaMejor.setCamaras(candidato.camaras, rango, apertura);
+            panelMapaMejor.repaint();
         }
     }
     private void cargarEscenario(int idx) {
         EscenarioDatos d = EscenariosFactory.cargar(idx);
         panelMapa.setMapa(d.mapa, d.importancia);
+        panelMapaMejor.setMapa(d.mapa, d.importancia);
+
     }
 
     private Individuo copiarIndividuo(Individuo ind) {
