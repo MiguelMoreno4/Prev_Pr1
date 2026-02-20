@@ -66,10 +66,8 @@ public class PanelMapaReal extends JPanel {
         if (camaras != null) {
             // Determinamos el algoritmo por la apertura (Modo Real vs Normal)
             if (apertura > 0.1 && apertura < 359) {
-                // EJECUTA TU LÓGICA ORIGINAL DEL .ZIP
                 dibujarCamarasReal(g2, cellSize);
             } else {
-                // EJECUTA LA NUEVA LÓGICA DE ILUMINACIÓN PARA EL NORMAL
                 dibujarCamarasNormal(g2, cellSize, filas, columnas);
             }
         }
@@ -142,30 +140,50 @@ public class PanelMapaReal extends JPanel {
      * NUEVA FUNCIÓN PARA EL GENÉTICO NORMAL (ILUMINACIÓN CON MUROS)
      */
     private void dibujarCamarasNormal(Graphics2D g2, int cellSize, int filas, int columnas) {
+        // 1. ILUMINACIÓN EN CRUZ
+        g2.setColor(new Color(144, 238, 144, 150)); // Verde semitransparente
+
+        for (CamaraReal c : camaras) {
+            // Obtenemos la celda origen (donde está parada la cámara)
+            int xCentro = (int) Math.floor(c.x);
+            int yCentro = (int) Math.floor(c.y);
+
+            // Direcciones: Derecha, Izquierda, Abajo, Arriba
+            int[][] direcciones = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+            for (int[] dir : direcciones) {
+                // Empezamos desde la celda de la cámara y nos movemos en la dirección
+                for (int d = 1; d <= Math.max(filas, columnas); d++) {
+                    int nx = xCentro + (dir[0] * d);
+                    int ny = yCentro + (dir[1] * d);
+
+                    // Comprobar límites del tablero
+                    if (nx < 0 || nx >= columnas || ny < 0 || ny >= filas) break;
+                    
+                    // Comprobar si hay muro
+                    if (mapa[ny][nx] == 1) break; 
+
+                    // Pintar la celda visible
+                    g2.fillRect(nx * cellSize, ny * cellSize, cellSize, cellSize);
+                    
+                    // Dibujar un borde sutil para que se sigan viendo las celdas
+                    g2.setColor(new Color(0, 100, 0, 40));
+                    g2.drawRect(nx * cellSize, ny * cellSize, cellSize, cellSize);
+                    g2.setColor(new Color(144, 238, 144, 150)); // Restaurar color verde
+                }
+            }
+        }
+
+        // 2. CUERPO DE LAS CÁMARAS (Para que queden por encima de la luz)
         for (CamaraReal c : camaras) {
             int cx = (int) (c.x * cellSize + (cellSize / 2.0));
             int cy = (int) (c.y * cellSize + (cellSize / 2.0));
             int r = cellSize / 3;
 
-            // 1. ILUMINACIÓN: Lanzamos rayos para marcar celdas (No atraviesa muros)
-            g2.setColor(new Color(144, 238, 144, 100)); // verde claro
-            for (int a = 0; a < 360; a += 5) {
-                double rad = Math.toRadians(a);
-                for (int d = 1; d <= rango; d++) {
-                    int nx = (int) (c.x + Math.cos(rad) * d);
-                    int ny = (int) (c.y + Math.sin(rad) * d);
-
-                    if (nx < 0 || nx >= columnas || ny < 0 || ny >= filas) break;
-                    if (mapa[ny][nx] == 1) break; // MURO: El rayo no pasa
-
-                    g2.fillRect(nx * cellSize, ny * cellSize, cellSize, cellSize);
-                }
-            }
-
-            // 2. CUERPO DE LA CÁMARA (Igual que en el Real para mantener estética)
             g2.setColor(Color.BLUE);
             g2.fillOval(cx - r, cy - r, r * 2, r * 2);
             g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(2));
             g2.drawOval(cx - r, cy - r, r * 2, r * 2);
         }
     }
