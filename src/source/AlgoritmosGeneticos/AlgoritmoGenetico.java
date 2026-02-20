@@ -13,7 +13,6 @@ public class AlgoritmoGenetico {
     private int numCamaras;
     private Random rnd = new Random();
     private boolean modoPonderado = false;
-    private int[][] importancia; 
     private VentanaPrincipal ventana;
 
     public AlgoritmoGenetico(Mapa mapa, int rango, int numCamaras, VentanaPrincipal ventana) {
@@ -25,10 +24,6 @@ public class AlgoritmoGenetico {
 
     public void setModoPonderado(boolean ponderado) {
         this.modoPonderado = ponderado;
-    }
-
-    public void setImportancia(int[][] importancia) {
-        this.importancia = importancia;
     }
 
     public Individuo ejecutar(int generaciones, double probMutacion) {

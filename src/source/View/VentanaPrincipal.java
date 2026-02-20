@@ -1,6 +1,7 @@
 package source.View;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import source.AlgoritmosGeneticos.AlgoritmoGenetico;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
 import source.Camaras.Camara;
@@ -17,89 +18,121 @@ import java.util.List;
 public class VentanaPrincipal extends JFrame {
 
     private JPanel contentPane;
-    private PanelMapaReal panelMapa;
-    private PanelMapaReal panelMapaMejor;
+    private PanelMapaReal panelMapa; 
     private JButton btnEjecutar;
     private JCheckBox chckbxPonderado;
     private JComboBox<String> comboEscenario;
     private JRadioButton rdbtnNormal, rdbtnReal;
     private JTextArea textAreaResultados;
-    private JSpinner spinnerGeneraciones;
     private PanelGrafica panelGrafica;
-    
-    private IndividuoReal mejorAbsolutoReal = null;
-    private Individuo mejorAbsoluto = null;
-    private double mejorFitnessAbsoluto = -1.0; // Cambiado a double para compatibilidad
 
+    private JLabel lblGenActual, lblMejorFitness;
+    private JSpinner spinPob, spinGens, spinCruce, spinMut, spinElite;
+    private JComboBox<String> comboSeleccion, comboCruce;
+    
     public VentanaPrincipal() {
-        setTitle("Optimización de Cámaras - AG");
+        setTitle("Optimización de Cámaras - Panel de Control AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 1200, 650);
+        // Ensanchamos a 1150 para que el panel de parámetros no colapse
+        setBounds(50, 50, 1150, 800); 
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
         setContentPane(contentPane);
 
-        // ===== CONFIGURACIÓN UI =====
-        comboEscenario = new JComboBox<>(new String[]{
-                "Escenario 1 - Museo",
-                "Escenario 2 - Pasillos",
-                "Escenario 3 - Supermercado"
-        });
-        comboEscenario.setBounds(20, 15, 220, 25);
-        contentPane.add(comboEscenario);
+        // ===== 1. BLOQUE CONFIGURACIÓN SUPERIOR =====
+        JPanel pnlConfig = new JPanel();
+        pnlConfig.setBounds(20, 10, 1090, 50);
+        pnlConfig.setBorder(BorderFactory.createEtchedBorder());
+        pnlConfig.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        contentPane.add(pnlConfig);
 
-        chckbxPonderado = new JCheckBox("Modo ponderado");
-        chckbxPonderado.setBounds(260, 15, 150, 25);
-        contentPane.add(chckbxPonderado);
-
-        rdbtnNormal = new JRadioButton("Normal");
-        rdbtnNormal.setBounds(420, 15, 80, 25);
-        rdbtnNormal.setSelected(true);
+        comboEscenario = new JComboBox<>(new String[]{"Escenario 1 - Museo", "Escenario 2 - Pasillos", "Escenario 3 - Supermercado"});
+        rdbtnNormal = new JRadioButton("Binario", true);
         rdbtnReal = new JRadioButton("Real");
-        rdbtnReal.setBounds(510, 15, 80, 25);
-
         ButtonGroup grupoModo = new ButtonGroup();
-        grupoModo.add(rdbtnNormal);
-        grupoModo.add(rdbtnReal);
-        contentPane.add(rdbtnNormal);
-        contentPane.add(rdbtnReal);
+        grupoModo.add(rdbtnNormal); grupoModo.add(rdbtnReal);
 
-        JLabel labelGeneraciones = new JLabel("Gens:");
-        labelGeneraciones.setBounds(880, 15, 50, 25);
-        contentPane.add(labelGeneraciones);
+        pnlConfig.add(new JLabel("Escenario:")); pnlConfig.add(comboEscenario);
+        pnlConfig.add(Box.createHorizontalStrut(20));
+        pnlConfig.add(new JLabel("Tipo:")); pnlConfig.add(rdbtnNormal); pnlConfig.add(rdbtnReal);
+        pnlConfig.add(Box.createHorizontalStrut(20));
+        chckbxPonderado = new JCheckBox("Ponderado");
+        pnlConfig.add(chckbxPonderado);
 
-        spinnerGeneraciones = new JSpinner(new SpinnerNumberModel(500, 1, 5000, 50));
-        spinnerGeneraciones.setBounds(930, 15, 70, 25);
-        contentPane.add(spinnerGeneraciones);
+        // ===== 2. BLOQUE PARÁMETROS AG (Optimizado para espacio) =====
+        JPanel pnlParams = new JPanel();
+        pnlParams.setBounds(20, 65, 1090, 65);
+        pnlParams.setBorder(BorderFactory.createTitledBorder(null, "Configuración del Algoritmo", TitledBorder.LEADING, TitledBorder.TOP, new Font("Tahoma", Font.BOLD, 11)));
+        pnlParams.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 5));
+        contentPane.add(pnlParams);
+
+        Dimension dimSpin = new Dimension(50, 22); // Spinners ligeramente más estrechos
+        spinPob = new JSpinner(new SpinnerNumberModel(100, 10, 1000, 10)); spinPob.setPreferredSize(dimSpin);
+        spinGens = new JSpinner(new SpinnerNumberModel(200, 1, 5000, 50)); spinGens.setPreferredSize(dimSpin);
+        spinCruce = new JSpinner(new SpinnerNumberModel(60, 0, 100, 5)); spinCruce.setPreferredSize(dimSpin);
+        spinMut = new JSpinner(new SpinnerNumberModel(5, 0, 100, 1)); spinMut.setPreferredSize(dimSpin);
+        spinElite = new JSpinner(new SpinnerNumberModel(5, 0, 50, 1)); spinElite.setPreferredSize(dimSpin);
         
-        btnEjecutar = new JButton("Ejecutar AG");
-        btnEjecutar.setBounds(610, 15, 150, 25);
-        contentPane.add(btnEjecutar);
+        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta"});
+        comboCruce = new JComboBox<>(new String[]{"Punto", "Aritm."}); // Nombres más cortos para ahorrar espacio
 
-        // ===== PANELES DE MAPA =====
+        pnlParams.add(new JLabel("Pob:")); pnlParams.add(spinPob);
+        pnlParams.add(new JLabel("Gen:")); pnlParams.add(spinGens);
+        pnlParams.add(new JLabel("Cr%:")); pnlParams.add(spinCruce);
+        pnlParams.add(new JLabel("Mu%:")); pnlParams.add(spinMut);
+        pnlParams.add(new JLabel("El%:")); pnlParams.add(spinElite);
+        pnlParams.add(new JLabel("Sel:")); pnlParams.add(comboSeleccion);
+        pnlParams.add(new JLabel("Cru:")); pnlParams.add(comboCruce);
+
+        pnlParams.add(Box.createHorizontalStrut(10)); // Espacio antes del botón
+
+        btnEjecutar = new JButton("EJECUTAR AG");
+        btnEjecutar.setPreferredSize(new Dimension(130, 30));
+        btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 11));
+        btnEjecutar.setBackground(new Color(39, 174, 96)); // Un verde más elegante
+        btnEjecutar.setForeground(Color.WHITE);
+        btnEjecutar.setOpaque(true);
+        btnEjecutar.setBorderPainted(false); // Opcional: quita el borde para un look más moderno
+        btnEjecutar.setFocusPainted(false);  // Quita el recuadro de puntos al hacer clic
+        // ----------------------------------------------------
+
+        pnlParams.add(btnEjecutar);
+        // ===== 3. MAPA ÚNICO Y RESULTADOS (Equilibrados) =====
         panelMapa = new PanelMapaReal();
-        panelMapa.setBounds(20, 60, 350, 350);
-        panelMapa.setBorder(BorderFactory.createTitledBorder("Evolución en tiempo real"));
+        panelMapa.setBounds(20, 140, 520, 390); 
+        panelMapa.setBorder(BorderFactory.createTitledBorder("Visualización"));
         contentPane.add(panelMapa);
 
-        panelMapaMejor = new PanelMapaReal();
-        panelMapaMejor.setBounds(760, 60, 350, 350);
-        panelMapaMejor.setBorder(BorderFactory.createTitledBorder("Mejor solución histórica"));
-        contentPane.add(panelMapaMejor);
-        
-        panelGrafica = new PanelGrafica();
-        panelGrafica.setBounds(20, 420, 1100, 150);
-        panelGrafica.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        contentPane.add(panelGrafica);
-
         textAreaResultados = new JTextArea();
+        textAreaResultados.setFont(new Font("Monospaced", Font.PLAIN, 12));
         textAreaResultados.setEditable(false);
         JScrollPane scroll = new JScrollPane(textAreaResultados);
-        scroll.setBounds(390, 60, 350, 350);
+        scroll.setBounds(555, 140, 555, 390); 
+        scroll.setBorder(BorderFactory.createTitledBorder("Consola de Resultados"));
         contentPane.add(scroll);
 
+        // ===== 4. ETIQUETAS ESTADÍSTICAS =====
+        lblGenActual = new JLabel("Generación: 0");
+        lblGenActual.setFont(new Font("Tahoma", Font.BOLD, 14));
+        lblGenActual.setBounds(30, 540, 200, 25);
+        contentPane.add(lblGenActual);
+
+        lblMejorFitness = new JLabel("Mejor Fitness: 0.00");
+        lblMejorFitness.setFont(new Font("Tahoma", Font.BOLD, 14));
+        lblMejorFitness.setForeground(new Color(41, 128, 185));
+        lblMejorFitness.setBounds(250, 540, 400, 25);
+        contentPane.add(lblMejorFitness);
+
+        // ===== 5. GRÁFICA =====
+        panelGrafica = new PanelGrafica();
+        panelGrafica.setBounds(20, 575, 1090, 170);
+        panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        contentPane.add(panelGrafica);
+
         btnEjecutar.addActionListener(this::ejecutarAG);
+        comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
+
         cargarEscenario(0);
     }
 
@@ -108,139 +141,97 @@ public class VentanaPrincipal extends JFrame {
             SwingUtilities.invokeLater(() -> {
                 panelGrafica.limpiar();
                 btnEjecutar.setEnabled(false);
-                mejorFitnessAbsoluto = -1.0;
-                mejorAbsoluto = null;
-                mejorAbsolutoReal = null;
+                textAreaResultados.setText("Ejecutando algoritmo...\n");
             });
 
-            int escenarioIdx = comboEscenario.getSelectedIndex();
-            EscenarioDatos datos = EscenariosFactory.cargar(escenarioIdx);
-            
-            // === PASO 3: Vincular importancia al objeto Mapa ===
+            int escIdx = comboEscenario.getSelectedIndex();
+            EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
             Mapa mapaActual = (Mapa) datos.mapaObj;
-            mapaActual.setMatrizImportancia(datos.importancia); 
-            // ===================================================
+            mapaActual.setMatrizImportancia(datos.importancia);
 
+            int tPob = (int) spinPob.getValue();
+            int tGen = (int) spinGens.getValue();
+            double pCruce = (int) spinCruce.getValue() / 100.0;
+            double pMut = (int) spinMut.getValue() / 100.0;
+            double pElite = (int) spinElite.getValue() / 100.0;
             boolean ponderado = chckbxPonderado.isSelected();
-            int numGens = (int) spinnerGeneraciones.getValue();
 
             if (rdbtnReal.isSelected()) {
-                ejecutarAGReal(datos, ponderado, numGens);
+                AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(mapaActual, datos.rango, datos.numCamaras, 60.0, this);
+                agReal.setModoPonderado(ponderado);
+                agReal.setConfig(tPob, pCruce, pMut, pElite);
+                IndividuoReal mejor = agReal.ejecutar(tGen);
+                SwingUtilities.invokeLater(() -> mostrarResultadosReal(mejor, datos.rango, 60.0));
             } else {
-                AlgoritmoGenetico ag = new AlgoritmoGenetico(
-                        mapaActual, 
-                        datos.rango, 
-                        datos.numCamaras, 
-                        this
-                );
-                
+                AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
                 ag.setModoPonderado(ponderado);
-                // Ya no necesitas ag.setImportancia porque el AG 
-                // ahora lee directamente del mapaActual
-                
-                Individuo candidato = ag.ejecutar(numGens, 0.15);
-                SwingUtilities.invokeLater(() -> mostrarResultados(candidato));
+                Individuo mejor = ag.ejecutar(tGen, pMut);
+                SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
             }
 
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
         }).start();
     }
 
-    private void ejecutarAGReal(EscenarioDatos datos, boolean ponderado, int generaciones) {
-        AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(
-                (Mapa) datos.mapaObj,
-                datos.rango,
-                datos.numCamaras,
-                60.0,
-                this
-        );
-        agReal.setModoPonderado(ponderado);
-        agReal.setImportancia(datos.importancia);
-
-        IndividuoReal candidato = agReal.ejecutar(generaciones, 0.15);
-        SwingUtilities.invokeLater(() -> mostrarResultadosReal(candidato, datos.rango, 60.0));
+    public void actualizarMapaRealEnTiempoReal(List<CamaraReal> cams, int g, double f, int r, double a) {
+        SwingUtilities.invokeLater(() -> {
+            panelMapa.setCamaras(cams, r, a);
+            panelMapa.repaint();
+            lblGenActual.setText("Generación: " + g);
+            lblMejorFitness.setText("Mejor Fitness: " + String.format("%.2f", f));
+        });
     }
 
     public void actualizarMapaEnTiempoReal(Individuo ind, int gen) {
         SwingUtilities.invokeLater(() -> {
-            panelMapa.setCamaras(convertirACamarasReales(ind.camaras), 1, 0);
+            List<CamaraReal> visual = new ArrayList<>();
+            for (Camara c : ind.camaras) visual.add(new CamaraReal(c.x, c.y, 0));
+            panelMapa.setCamaras(visual, 1, 0); 
             panelMapa.repaint();
-            setTitle("Generación: " + gen + " | Fitness: " + String.format("%.2f", ind.fitness));
+            lblGenActual.setText("Generación: " + gen);
+            lblMejorFitness.setText("Mejor Fitness: " + String.format("%.2f", ind.fitness));
         });
     }
 
-    public void actualizarMapaRealEnTiempoReal(List<CamaraReal> camaras, int gen, double fitness, int rango, double apertura) {
-        SwingUtilities.invokeLater(() -> {
-            panelMapa.setCamaras(camaras, rango, apertura);
-            panelMapa.repaint();
-            setTitle("Generación: " + gen + " | Fitness: " + String.format("%.2f", fitness));
-        });
-    }
-
-    private void mostrarResultados(Individuo candidato) {
-        if (mejorAbsoluto == null || candidato.fitness > mejorFitnessAbsoluto) {
-            mejorFitnessAbsoluto = candidato.fitness;
-            mejorAbsoluto = copiarIndividuo(candidato);
-
-            textAreaResultados.setText("=== MEJOR SOLUCIÓN NORMAL ===\n");
-            textAreaResultados.append(String.format("Fitness: %.2f\n\n", mejorFitnessAbsoluto));
-
-            for (Camara c : mejorAbsoluto.camaras) {
-                textAreaResultados.append(String.format("Cámara en (%d, %d)\n", (int)c.x, (int)c.y));
-            }
-
-            panelMapaMejor.setCamaras(convertirACamarasReales(mejorAbsoluto.camaras), 1, 0);
-            panelMapaMejor.repaint();
-        }
-    }
-
-    private void mostrarResultadosReal(IndividuoReal candidato, int rango, double apertura) {
-        if (mejorAbsolutoReal == null || candidato.fitness > mejorFitnessAbsoluto) {
-            mejorFitnessAbsoluto = candidato.fitness;
-            mejorAbsolutoReal = candidato;
-
-            textAreaResultados.setText("=== MEJOR SOLUCIÓN REAL ===\n");
-            textAreaResultados.append(String.format("Fitness: %.4f\n\n", candidato.fitness));
-
-            for (int i = 0; i < candidato.camaras.size(); i++) {
-                CamaraReal c = candidato.camaras.get(i);
-                textAreaResultados.append(String.format("Cámara %d: (%.2f, %.2f) θ: %.1f°\n", 
-                                          (i+1), c.x, c.y, c.theta));
-            }
-
-            panelMapaMejor.setCamaras(candidato.camaras, rango, apertura);
-            panelMapaMejor.repaint();
-        }
+    public void actualizarGrafica(double mGen, double mAbs, double med) {
+        SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(mGen, mAbs, med));
     }
 
     private void cargarEscenario(int idx) {
         EscenarioDatos d = EscenariosFactory.cargar(idx);
         panelMapa.setMapa(d.mapa, d.importancia);
-        panelMapaMejor.setMapa(d.mapa, d.importancia);
+        panelMapa.repaint();
+        String nombreEsc = comboEscenario.getSelectedItem().toString();
+        textAreaResultados.setText("Escenario: " + nombreEsc + "\n");
     }
 
-    private List<CamaraReal> convertirACamarasReales(List<Camara> normales) {
+    private void mostrarResultadosReal(IndividuoReal ind, int r, double a) {
+        textAreaResultados.setText("=== RESULTADOS FINALES (REAL) ===\n");
+        textAreaResultados.append("Fitness Máximo: " + String.format("%.2f", ind.fitness) + "\n\n");
+        for(int i=0; i<ind.camaras.size(); i++) {
+            CamaraReal c = ind.camaras.get(i);
+            textAreaResultados.append(String.format("Cámara %d: X:%.1f, Y:%.1f, Áng:%.1f°\n", i+1, c.x, c.y, c.theta));
+        }
+        panelMapa.setCamaras(ind.camaras, r, a);
+        panelMapa.repaint();
+    }
+
+    private void mostrarResultados(Individuo ind) {
+        textAreaResultados.setText("=== RESULTADOS FINALES (BINARIO) ===\n");
+        textAreaResultados.append("Fitness Máximo: " + String.format("%.2f", ind.fitness) + "\n\n");
         List<CamaraReal> lista = new ArrayList<>();
-        for (Camara c : normales) {
-            lista.add(new CamaraReal(c.x, c.y, 0)); 
+        for(Camara c : ind.camaras) {
+            lista.add(new CamaraReal(c.x, c.y, 0));
+            textAreaResultados.append(String.format("Cámara en: (%d, %d)\n", (int)c.x, (int)c.y));
         }
-        return lista;
-    }
-
-    private Individuo copiarIndividuo(Individuo ind) {
-        Individuo copia = new Individuo();
-        for (Camara c : ind.camaras) {
-            copia.camaras.add(new Camara(c.x, c.y));
-        }
-        copia.fitness = ind.fitness;
-        return copia;
-    }
-
-    public void actualizarGrafica(double mejorGen, double mejorAbs, double media) {
-        SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(mejorGen, mejorAbs, media));
+        panelMapa.setCamaras(lista, 1, 0);
+        panelMapa.repaint();
     }
 
     public static void main(String[] args) {
-        EventQueue.invokeLater(() -> new VentanaPrincipal().setVisible(true));
+        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
+        EventQueue.invokeLater(() -> {
+            new VentanaPrincipal().setVisible(true);
+        });
     }
 }
