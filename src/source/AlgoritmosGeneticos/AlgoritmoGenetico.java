@@ -53,30 +53,41 @@ public class AlgoritmoGenetico {
             poblacion.add(ind);
         }
 
-        Individuo mejorGlobal = poblacion.get(0).copiar();
+        Individuo mejorGlobal = poblacion.stream()
+                .max(Comparator.comparingDouble(ind -> ind.fitness))
+                .get()
+                .copiar();
 
         for (int g = 0; g < generaciones; g++) {
-            poblacion.sort((a, b) -> Double.compare(b.fitness, a.fitness));
-            Individuo elite = poblacion.get(0).copiar();
-            if (elite.fitness > mejorGlobal.fitness)
-                mejorGlobal = elite.copiar();
 
-            if (ventana != null) {
-                Individuo eliteDirecto = convertirADirecto(elite); // decodifica
-                ventana.actualizarMapaEnTiempoReal(eliteDirecto, g);
+            // 🔴 Mejor de esta generación
+            Individuo mejorGen = poblacion.stream()
+                    .max(Comparator.comparingDouble(ind -> ind.fitness))
+                    .get();
 
-                // actualizar gráfica
-                double mediaGen = 0;
-                for (Individuo ind : poblacion)
-                    mediaGen += ind.fitness;
-                mediaGen /= poblacion.size();
-                ventana.actualizarGrafica(eliteDirecto.fitness, mejorGlobal.fitness, mediaGen);
+            if (mejorGen.fitness > mejorGlobal.fitness) {
+                mejorGlobal = mejorGen.copiar();
             }
 
+            if (ventana != null) {
+                double mediaGen = poblacion.stream()
+                        .mapToDouble(ind -> ind.fitness)
+                        .average()
+                        .orElse(0.0);
+
+                ventana.actualizarMapaEnTiempoReal(mejorGen, g);
+                ventana.actualizarGrafica(
+                        mejorGen.fitness,      // 🔴 puede subir o bajar
+                        mejorGlobal.fitness,   // 🔵 nunca baja
+                        mediaGen               // 🟢 media
+                );
+            }
+
+            // 🔥 CREAR NUEVA GENERACIÓN SIN ELITISMO
             ArrayList<Individuo> nueva = new ArrayList<>();
-            nueva.add(elite);
 
             while (nueva.size() < poblacion.size()) {
+
                 Individuo padre1 = seleccionar(poblacion);
                 Individuo hijo;
 
@@ -94,12 +105,12 @@ public class AlgoritmoGenetico {
                 hijo.fitness = calcularFitness(hijo);
                 nueva.add(hijo);
             }
+
             poblacion = nueva;
         }
         mejorGlobal.camaras = decodificar(mejorGlobal);
         return mejorGlobal;
     }
-
     private Individuo crearAleatorio() {
         Individuo ind = new Individuo(longitudCromosoma);
         for (int i = 0; i < longitudCromosoma; i++)

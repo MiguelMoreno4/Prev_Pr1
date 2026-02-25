@@ -250,5 +250,5 @@ public class VentanaPrincipal extends JFrame {
         EventQueue.invokeLater(() -> {
             new VentanaPrincipal().setVisible(true);
         });
-    }
+    }    
 }
