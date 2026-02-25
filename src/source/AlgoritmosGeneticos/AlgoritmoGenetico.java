@@ -220,20 +220,31 @@ public class AlgoritmoGenetico {
     private double calcularFitness(Individuo ind) {
         List<Camara> cams = decodificar(ind);
         HashSet<String> vigiladas = new HashSet<>();
+        
+        // Penalización por cámara inválida
         for (Camara c : cams) {
+            if (c.x < 0 || c.x >= mapa.columnas || c.y < 0 || c.y >= mapa.filas || mapa.esObstaculo(c.x, c.y)) {
+                return -100; // penalización directa
+            }
             vigiladas.add(c.x + "," + c.y);
+
             int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
             for (int[] d : dirs) {
                 for (int i = 1; i <= rango; i++) {
                     int nx = c.x + d[0]*i;
                     int ny = c.y + d[1]*i;
-                    if (nx < 0 || nx >= mapa.columnas || ny < 0 || ny >= mapa.filas) break;
-                    if (mapa.esObstaculo(nx, ny)) break;
+
+                    if (nx < 0 || nx >= mapa.columnas || ny < 0 || ny >= mapa.filas)
+                        break;
+                    if (mapa.esObstaculo(nx, ny))
+                        break;
+
                     vigiladas.add(nx + "," + ny);
                 }
             }
         }
-        return vigiladas.size();
+
+        return vigiladas.size(); // número de celdas únicas vigiladas
     }
 
     private Individuo convertirADirecto(Individuo bin) {
