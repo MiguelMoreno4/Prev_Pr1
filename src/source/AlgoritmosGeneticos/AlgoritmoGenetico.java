@@ -219,15 +219,26 @@ public class AlgoritmoGenetico {
 
     private double calcularFitness(Individuo ind) {
         List<Camara> cams = decodificar(ind);
+
+        // Penalización si no hay el número exacto de cámaras
+        if (cams.size() != numCamaras)
+            return 0; // Para la media, no usar -100
+
         HashSet<String> vigiladas = new HashSet<>();
-        
-        // Penalización por cámara inválida
+        HashSet<String> posicionesCamaras = new HashSet<>();
         for (Camara c : cams) {
+            posicionesCamaras.add(c.x + "," + c.y);
+        }
+
+        for (Camara c : cams) {
+            // Penalización si cámara sobre obstáculo o fuera del mapa
             if (c.x < 0 || c.x >= mapa.columnas || c.y < 0 || c.y >= mapa.filas || mapa.esObstaculo(c.x, c.y)) {
-                return -100; // penalización directa
+                return 0; // Penalización para media
             }
+
             vigiladas.add(c.x + "," + c.y);
 
+            // Direcciones ortogonales
             int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
             for (int[] d : dirs) {
                 for (int i = 1; i <= rango; i++) {
@@ -238,15 +249,16 @@ public class AlgoritmoGenetico {
                         break;
                     if (mapa.esObstaculo(nx, ny))
                         break;
+                    if (posicionesCamaras.contains(nx + "," + ny))
+                        break;
 
                     vigiladas.add(nx + "," + ny);
                 }
             }
         }
 
-        return vigiladas.size(); // número de celdas únicas vigiladas
+        return vigiladas.size();
     }
-
     private Individuo convertirADirecto(Individuo bin) {
         Individuo ind = new Individuo();
         ind.camaras = decodificar(bin);
