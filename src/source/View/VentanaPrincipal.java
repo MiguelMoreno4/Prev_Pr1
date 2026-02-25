@@ -96,8 +96,14 @@ public class VentanaPrincipal extends JFrame {
         btnEjecutar.setBorderPainted(false); // Opcional: quita el borde para un look más moderno
         btnEjecutar.setFocusPainted(false);  // Quita el recuadro de puntos al hacer clic
         // ----------------------------------------------------
-
+        
         pnlParams.add(btnEjecutar);
+        
+     // 1. Añadimos en la sección de parámetros AG:
+        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta", "Estocástico", "Truncamiento", "Restos"});
+        pnlParams.add(new JLabel("Sel:")); 
+        pnlParams.add(comboSeleccion);
+        
         // ===== 3. MAPA ÚNICO Y RESULTADOS (Equilibrados) =====
         panelMapa = new PanelMapaReal();
         panelMapa.setBounds(20, 140, 520, 390); 
@@ -137,42 +143,53 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private void ejecutarAG(ActionEvent e) {
-        new Thread(() -> {
-            SwingUtilities.invokeLater(() -> {
-                panelGrafica.limpiar();
-                btnEjecutar.setEnabled(false);
-                textAreaResultados.setText("Ejecutando algoritmo...\n");
-            });
 
-            int escIdx = comboEscenario.getSelectedIndex();
-            EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
-            Mapa mapaActual = (Mapa) datos.mapaObj;
-            mapaActual.setMatrizImportancia(datos.importancia);
+    	   new Thread(() -> {
+               SwingUtilities.invokeLater(() -> {
+                   panelGrafica.limpiar();
+                   btnEjecutar.setEnabled(false);
+                   textAreaResultados.setText("Ejecutando algoritmo...\n");
+               });
 
-            int tPob = (int) spinPob.getValue();
-            int tGen = (int) spinGens.getValue();
-            double pCruce = (int) spinCruce.getValue() / 100.0;
-            double pMut = (int) spinMut.getValue() / 100.0;
-            double pElite = (int) spinElite.getValue() / 100.0;
-            boolean ponderado = chckbxPonderado.isSelected();
+               int escIdx = comboEscenario.getSelectedIndex();
+               EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
+               Mapa mapaActual = (Mapa) datos.mapaObj;
+               mapaActual.setMatrizImportancia(datos.importancia);
 
-            if (rdbtnReal.isSelected()) {
-                AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(mapaActual, datos.rango, datos.numCamaras, 60.0, this);
-                agReal.setModoPonderado(ponderado);
-                agReal.setConfig(tPob, pCruce, pMut, pElite);
-                IndividuoReal mejor = agReal.ejecutar(tGen);
-                SwingUtilities.invokeLater(() -> mostrarResultadosReal(mejor, datos.rango, 60.0));
-            } else {
-                AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
-                ag.setModoPonderado(ponderado);
-                Individuo mejor = ag.ejecutar(tGen, pMut);
-                SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
-            }
+               int tPob = (int) spinPob.getValue();
+               int tGen = (int) spinGens.getValue();
+               double pCruce = (int) spinCruce.getValue() / 100.0;
+               double pMut = (int) spinMut.getValue() / 100.0;
+               double pElite = (int) spinElite.getValue() / 100.0;
+               boolean ponderado = chckbxPonderado.isSelected();
 
-            SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
-        }).start();
+               if (!rdbtnReal.isSelected()) {
+            	    AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+            	    ag.setModoPonderado(ponderado);
+
+            	    // Establecemos el método de selección según combo
+            	    switch (comboSeleccion.getSelectedIndex()) {
+            	        case 0: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TORNEO); break;
+            	        case 1: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RULETA); break;
+            	        case 2: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.ESTOCASTICO); break;
+            	        case 3: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TRUNCAMIENTO); break;
+            	        case 4: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RESTOS); break;
+            	    }
+
+            	    // Podemos elegir cruce uniforme/monopunto si quieres también desde otro combo
+            	    ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO); // por defecto
+            	    Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
+            	    SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
+            	}else {
+                   AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+                   ag.setModoPonderado(ponderado);
+                   Individuo mejor = ag.ejecutar(tGen, pMut,pCruce);
+                   SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
+               }
+
+               SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+           }).start();
     }
-
     public void actualizarMapaRealEnTiempoReal(List<CamaraReal> cams, int g, double f, int r, double a) {
         SwingUtilities.invokeLater(() -> {
             panelMapa.setCamaras(cams, r, a);
