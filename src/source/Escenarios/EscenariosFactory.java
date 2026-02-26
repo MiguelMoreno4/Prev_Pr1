@@ -32,7 +32,8 @@ public class EscenariosFactory {
                                 {1,1,5,5,5,0,5,5,5,1},
                                 {1,1,1,1,1,1,1,0,1,1}
                         },
-                        4, 3
+                        4, 3,
+                        60.0
                 );
 
             case 1: // ESCENARIO 2 - PASILLOS
@@ -65,7 +66,8 @@ public class EscenariosFactory {
                                 {0,20,0,0,0,1,1,1,1,1,0,0,0,20,0},
                                 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
                         },
-                        7, 5
+                        7, 5,
+                        90.00
                 );
 
             case 2: // ESCENARIO 3 - SUPERMERCADO (ejemplo)
@@ -110,7 +112,8 @@ public class EscenariosFactory {
                         	{0, 1,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20, 1, 0}, // Cajas
                         	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
                         },
-                        8, 7
+                        8, 7,
+                        70.00
                 );
         }
         return null;

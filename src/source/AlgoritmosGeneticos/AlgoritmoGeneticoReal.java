@@ -1,9 +1,6 @@
 package source.AlgoritmosGeneticos;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import source.Camaras.CamaraReal;
 import source.Individuos.IndividuoReal;
 import source.View.VentanaPrincipal;
@@ -17,12 +14,15 @@ public class AlgoritmoGeneticoReal {
     private double apertura;
     private VentanaPrincipal ventana;
     private Random random = new Random();
-    
+
     private int tamPoblacion = 100;
     private double probCruce = 0.6;
     private double probMutacion = 0.05;
     private double porcentajeElite = 0.05;
     private boolean modoPonderado = false;
+
+    public enum MetodoSeleccion { TORNEO, RULETA, ESTOCASTICO, TRUNCAMIENTO, RESTOS }
+    private MetodoSeleccion metodoSeleccion = MetodoSeleccion.TORNEO;
 
     public AlgoritmoGeneticoReal(Mapa mapa, int rango, int numCamaras, double apertura, VentanaPrincipal ventana) {
         this.mapa = mapa;
@@ -39,9 +39,8 @@ public class AlgoritmoGeneticoReal {
         this.porcentajeElite = elite;
     }
 
-    public void setModoPonderado(boolean valor) {
-        this.modoPonderado = valor;
-    }
+    public void setModoPonderado(boolean valor) { this.modoPonderado = valor; }
+    public void setMetodoSeleccion(MetodoSeleccion m) { this.metodoSeleccion = m; }
 
     public IndividuoReal ejecutar(int generaciones) {
         List<IndividuoReal> poblacion = crearPoblacionInicial();
@@ -53,96 +52,139 @@ public class AlgoritmoGeneticoReal {
             }
 
             poblacion.sort((a, b) -> Double.compare(b.fitness, a.fitness));
-            
-            if (mejorAbsoluto == null || poblacion.get(0).fitness > mejorAbsoluto.fitness) {
-                mejorAbsoluto = poblacion.get(0).copiar(); // Usamos tu método copiar()
-            }
+
+            if (mejorAbsoluto == null || poblacion.get(0).fitness > mejorAbsoluto.fitness)
+                mejorAbsoluto = poblacion.get(0).copiar();
 
             if (ventana != null) {
                 ventana.actualizarMapaRealEnTiempoReal(poblacion.get(0).camaras, g, poblacion.get(0).fitness, rango, apertura);
                 ventana.actualizarGrafica(poblacion.get(0).fitness, mejorAbsoluto.fitness, calcularMedia(poblacion));
             }
-            
-            try {
-                Thread.sleep(10); 
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            
+
             List<IndividuoReal> nuevaPob = new ArrayList<>();
             int numElite = (int) (tamPoblacion * porcentajeElite);
-            for (int i = 0; i < numElite; i++) {
-                nuevaPob.add(poblacion.get(i).copiar());
-            }
+            for (int i = 0; i < numElite; i++) nuevaPob.add(poblacion.get(i).copiar());
 
             while (nuevaPob.size() < tamPoblacion) {
                 IndividuoReal p1 = seleccionar(poblacion);
                 IndividuoReal p2 = seleccionar(poblacion);
-                
+
                 IndividuoReal hijo = (random.nextDouble() < probCruce) ? cruceAritmetico(p1, p2) : p1.copiar();
-                
-                if (random.nextDouble() < probMutacion) {
-                    mutar(hijo);
-                }
+                if (random.nextDouble() < probMutacion) mutar(hijo);
+
                 nuevaPob.add(hijo);
             }
+
             poblacion = nuevaPob;
         }
+
         return mejorAbsoluto;
     }
 
     private List<IndividuoReal> crearPoblacionInicial() {
         List<IndividuoReal> pob = new ArrayList<>();
         for (int i = 0; i < tamPoblacion; i++) {
-            IndividuoReal ind = new IndividuoReal(); // Usamos tu constructor vacío
-            for (int j = 0; j < numCamaras; j++) {
-                ind.camaras.add(generarCamaraValida());
-            }
+            IndividuoReal ind = new IndividuoReal();
+            for (int j = 0; j < numCamaras; j++) ind.camaras.add(generarCamaraValida());
             pob.add(ind);
         }
         return pob;
     }
 
     private CamaraReal generarCamaraValida() {
-        int x, y;
+        double x, y;
         do {
-            x = random.nextInt(mapa.columnas);
-            y = random.nextInt(mapa.filas);
-        } while (mapa.esObstaculo(x, y));
-        
+            x = random.nextDouble() * mapa.columnas;
+            y = random.nextDouble() * mapa.filas;
+        } while (mapa.esObstaculo((int)x, (int)y));
         return new CamaraReal(x, y, random.nextDouble() * 360);
     }
-    
+
+    // ---------------- CALCULO FITNESS CORRECTO ----------------
     private double calcularFitness(IndividuoReal ind) {
         boolean[][] visto = new boolean[mapa.filas][mapa.columnas];
         double score = 0;
 
         for (CamaraReal c : ind.camaras) {
-            // 1. Usamos a += 1.0 para no saltarnos ningún muro por error
-            for (double a = c.theta - apertura / 2; a <= c.theta + apertura / 2; a += 1.0) {
-                
-                // 2. Usamos pasos de distancia más cortos (0.5) para detectar muros mejor
-                for (double d = 1.0; d <= rango; d += 0.5) {
-                    int vx = (int) Math.floor(c.x + Math.cos(Math.toRadians(a)) * d);
-                    int vy = (int) Math.floor(c.y + Math.sin(Math.toRadians(a)) * d);
+            // Rango de celdas a revisar (cuadrado)
+            int minX = Math.max(0, (int)Math.floor(c.x - rango));
+            int maxX = Math.min(mapa.columnas - 1, (int)Math.ceil(c.x + rango));
+            int minY = Math.max(0, (int)Math.floor(c.y - rango));
+            int maxY = Math.min(mapa.filas - 1, (int)Math.ceil(c.y + rango));
 
-                    // Límites
-                    if (vx < 0 || vx >= mapa.columnas || vy < 0 || vy >= mapa.filas) break;
-                    
-                    // Muros: Si detectamos muro, este rayo muere
-                    if (mapa.esObstaculo(vx, vy)) break;
+            for (int vy = minY; vy <= maxY; vy++) {
+                for (int vx = minX; vx <= maxX; vx++) {
+                    // 1. Distancia
+                    double dx = vx + 0.5 - c.x;
+                    double dy = vy + 0.5 - c.y;
+                    double dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist > rango) continue;
 
-                    // Solo contamos si la distancia d es un entero (para no contar doble)
-                    if (d % 1.0 == 0 && !visto[vy][vx]) {
+                    // 2. Ángulo
+                    double angCelda = Math.toDegrees(Math.atan2(dy, dx));
+                    double angDif = Math.abs(Math.floorMod((int)angCelda - (int)c.theta + 360, 360));
+                    if (angDif > apertura/2 && angDif < 360 - apertura/2) continue;
+
+                    // 3. Raycast (línea de visión)
+                    if (!lineaDeVision(c.x, c.y, vx + 0.5, vy + 0.5)) continue;
+
+                    // Marcar visible
+                    if (!visto[vy][vx]) {
                         visto[vy][vx] = true;
                         score += modoPonderado ? mapa.getValorImportancia(vx, vy) : 1;
                     }
                 }
             }
         }
+
         return score;
     }
+
+    // Método auxiliar: raycast desde (x0,y0) hasta (x1,y1)
+    private boolean lineaDeVision(double x0, double y0, double x1, double y1) {
+        int steps = (int)(Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2)); 
+        for (int i = 1; i <= steps; i++) {
+            double t = (double)i / steps;
+            int xi = (int)Math.floor(x0 + (x1 - x0) * t);
+            int yi = (int)Math.floor(y0 + (y1 - y0) * t);
+            if (xi < 0 || xi >= mapa.columnas || yi < 0 || yi >= mapa.filas) return false;
+            if (mapa.esObstaculo(xi, yi)) return false;
+        }
+        return true;
+    }
+
+    private boolean hayObstaculoEnLinea(double x0, double y0, double x1, double y1, IndividuoReal ind) {
+        int pasos = (int) Math.ceil(Math.max(Math.abs(x1-x0), Math.abs(y1-y0)) * 2);
+        for (int i = 0; i <= pasos; i++) {
+            double t = i / (double) pasos;
+            double x = x0 + (x1 - x0) * t;
+            double y = y0 + (y1 - y0) * t;
+            int ix = (int)Math.floor(x);
+            int iy = (int)Math.floor(y);
+
+            if (ix < 0 || ix >= mapa.columnas || iy < 0 || iy >= mapa.filas) return true;
+            if (mapa.esObstaculo(ix, iy)) return true;
+
+            for (CamaraReal c : ind.camaras) {
+                if (c.x >= ix && c.x < ix+1 && c.y >= iy && c.y < iy+1) return true;
+            }
+        }
+        return false;
+    }
+
+    // ---------------- SELECCIÓN ----------------
     private IndividuoReal seleccionar(List<IndividuoReal> pob) {
+        switch (metodoSeleccion) {
+            case TORNEO: return seleccionarTorneo(pob);
+            case RULETA: return seleccionarRuleta(pob);
+            case ESTOCASTICO: return seleccionarEstocastico(pob);
+            case TRUNCAMIENTO: return seleccionarTruncamiento(pob);
+            case RESTOS: return seleccionarRestos(pob);
+            default: return seleccionarTorneo(pob);
+        }
+    }
+
+    private IndividuoReal seleccionarTorneo(List<IndividuoReal> pob) {
         IndividuoReal mejor = null;
         for (int i = 0; i < 3; i++) {
             IndividuoReal cand = pob.get(random.nextInt(pob.size()));
@@ -151,6 +193,47 @@ public class AlgoritmoGeneticoReal {
         return mejor;
     }
 
+    private IndividuoReal seleccionarRuleta(List<IndividuoReal> pob) {
+        double total = pob.stream().mapToDouble(ind -> ind.fitness).sum();
+        double r = random.nextDouble() * total;
+        double acum = 0;
+        for (IndividuoReal ind : pob) {
+            acum += ind.fitness;
+            if (acum >= r) return ind;
+        }
+        return pob.get(pob.size()-1);
+    }
+
+    private IndividuoReal seleccionarEstocastico(List<IndividuoReal> pob) {
+        double total = pob.stream().mapToDouble(ind -> ind.fitness).sum();
+        double p = total / pob.size();
+        double r = random.nextDouble() * total;
+        double acum = 0;
+        for (IndividuoReal ind : pob) {
+            acum += ind.fitness;
+            if (acum >= r) return ind;
+        }
+        return pob.get(pob.size()-1);
+    }
+
+    private IndividuoReal seleccionarTruncamiento(List<IndividuoReal> pob) {
+        pob.sort((a,b)->Double.compare(b.fitness, a.fitness));
+        int top = (int)(pob.size() * 0.5);
+        return pob.get(random.nextInt(top));
+    }
+
+    private IndividuoReal seleccionarRestos(List<IndividuoReal> pob) {
+        List<IndividuoReal> lista = new ArrayList<>();
+        double total = pob.stream().mapToDouble(ind -> ind.fitness).sum();
+        for (IndividuoReal ind : pob) {
+            int n = (int) Math.floor((ind.fitness / total) * pob.size());
+            for (int i=0;i<n;i++) lista.add(ind);
+        }
+        while (lista.size() < pob.size()) lista.add(pob.get(random.nextInt(pob.size())));
+        return lista.get(random.nextInt(lista.size()));
+    }
+
+    // ---------------- CRUCE ----------------
     private IndividuoReal cruceAritmetico(IndividuoReal p1, IndividuoReal p2) {
         IndividuoReal hijo = new IndividuoReal();
         double alpha = random.nextDouble();
@@ -165,25 +248,20 @@ public class AlgoritmoGeneticoReal {
         return hijo;
     }
 
+    // ---------------- MUTACIÓN ----------------
     private void mutar(IndividuoReal ind) {
         int idx = random.nextInt(ind.camaras.size());
         CamaraReal c = ind.camaras.get(idx);
-        
-        double nuevaX = c.x + (random.nextDouble() * 2 - 1);
-        double nuevaY = c.y + (random.nextDouble() * 2 - 1);
-
-        // Solo aplicamos el cambio si la nueva posición es suelo (0)
+        double nuevaX = c.x + (random.nextDouble()*2-1);
+        double nuevaY = c.y + (random.nextDouble()*2-1);
         if (nuevaX >= 0 && nuevaX < mapa.columnas && nuevaY >= 0 && nuevaY < mapa.filas) {
-            if (!mapa.esObstaculo((int)nuevaX, (int)nuevaY)) {
-                c.x = nuevaX;
-                c.y = nuevaY;
-            }
+            if (!mapa.esObstaculo((int)nuevaX,(int)nuevaY)) { c.x=nuevaX; c.y=nuevaY; }
         }
-        c.theta = (c.theta + random.nextGaussian() * 15) % 360;
+        c.theta = (c.theta + random.nextGaussian()*15) % 360;
+        if(c.theta<0) c.theta+=360;
     }
+
     private double calcularMedia(List<IndividuoReal> pob) {
-        double sum = 0;
-        for (IndividuoReal ind : pob) sum += ind.fitness;
-        return sum / pob.size();
+        return pob.stream().mapToDouble(ind -> ind.fitness).average().orElse(0);
     }
 }

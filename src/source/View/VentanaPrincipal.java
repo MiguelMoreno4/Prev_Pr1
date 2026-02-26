@@ -29,6 +29,7 @@ public class VentanaPrincipal extends JFrame {
     private JLabel lblGenActual, lblMejorFitness;
     private JSpinner spinPob, spinGens, spinCruce, spinMut, spinElite;
     private JComboBox<String> comboSeleccion, comboCruce;
+   
     
     public VentanaPrincipal() {
         setTitle("Optimización de Cámaras - Panel de Control AG");
@@ -180,13 +181,34 @@ public class VentanaPrincipal extends JFrame {
             	    ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO); // por defecto
             	    Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
             	    SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
-            	}else {
-                   AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
-                   ag.setModoPonderado(ponderado);
-                   Individuo mejor = ag.ejecutar(tGen, pMut,pCruce);
-                   SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
-               }
+               }else {
 
+            	    AlgoritmoGeneticoReal ag = new AlgoritmoGeneticoReal(
+            	            mapaActual,
+            	            datos.rango,
+            	            datos.numCamaras,
+            	            datos.apertura,   
+            	            this
+            	    );
+
+            	    ag.setModoPonderado(ponderado);
+            	    ag.setConfig(tPob, pCruce, pMut, pElite);
+
+            	    // Método de selección
+            	    switch (comboSeleccion.getSelectedIndex()) {
+            	    case 0: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TORNEO); break;
+            	    case 1: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RULETA); break;
+            	    case 2: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.ESTOCASTICO); break;
+            	    case 3: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TRUNCAMIENTO); break;
+            	    case 4: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RESTOS); break;
+            	}
+
+            	    IndividuoReal mejor = ag.ejecutar(tGen);
+
+            	    SwingUtilities.invokeLater(() ->
+            	            mostrarResultadosReal(mejor, datos.rango, datos.apertura)
+            	    );
+            	}
                SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
            }).start();
     }
