@@ -31,17 +31,21 @@ public class VentanaPrincipal extends JFrame {
     private JComboBox<String> comboSeleccion, comboCruce;
    
     
+ // --- Atributos de clase ---
+   // private JComboBox<String> comboSeleccion;
+    private JComboBox<String> comboCruceOp;
+    private JComboBox<String> comboMutacionOp;
+
     public VentanaPrincipal() {
         setTitle("Optimización de Cámaras - Panel de Control AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        // Ensanchamos a 1150 para que el panel de parámetros no colapse
         setBounds(50, 50, 1150, 800); 
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
         setContentPane(contentPane);
 
-        // ===== 1. BLOQUE CONFIGURACIÓN SUPERIOR =====
+        // ===== BLOQUE CONFIGURACIÓN SUPERIOR =====
         JPanel pnlConfig = new JPanel();
         pnlConfig.setBounds(20, 10, 1090, 50);
         pnlConfig.setBorder(BorderFactory.createEtchedBorder());
@@ -61,22 +65,23 @@ public class VentanaPrincipal extends JFrame {
         chckbxPonderado = new JCheckBox("Ponderado");
         pnlConfig.add(chckbxPonderado);
 
-        // ===== 2. BLOQUE PARÁMETROS AG (Optimizado para espacio) =====
+        // ===== BLOQUE PARÁMETROS AG =====
         JPanel pnlParams = new JPanel();
         pnlParams.setBounds(20, 65, 1090, 65);
         pnlParams.setBorder(BorderFactory.createTitledBorder(null, "Configuración del Algoritmo", TitledBorder.LEADING, TitledBorder.TOP, new Font("Tahoma", Font.BOLD, 11)));
         pnlParams.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 5));
         contentPane.add(pnlParams);
 
-        Dimension dimSpin = new Dimension(50, 22); // Spinners ligeramente más estrechos
+        Dimension dimSpin = new Dimension(50, 22);
         spinPob = new JSpinner(new SpinnerNumberModel(100, 10, 1000, 10)); spinPob.setPreferredSize(dimSpin);
         spinGens = new JSpinner(new SpinnerNumberModel(200, 1, 5000, 50)); spinGens.setPreferredSize(dimSpin);
         spinCruce = new JSpinner(new SpinnerNumberModel(60, 0, 100, 5)); spinCruce.setPreferredSize(dimSpin);
         spinMut = new JSpinner(new SpinnerNumberModel(5, 0, 100, 1)); spinMut.setPreferredSize(dimSpin);
         spinElite = new JSpinner(new SpinnerNumberModel(5, 0, 50, 1)); spinElite.setPreferredSize(dimSpin);
-        
-        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta"});
-        comboCruce = new JComboBox<>(new String[]{"Punto", "Aritm."}); // Nombres más cortos para ahorrar espacio
+
+        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta", "Estocástico", "Truncamiento", "Restos"});
+        comboCruceOp = new JComboBox<>(new String[]{"Monopunto", "Uniforme", "Aritmético", "BLX-α"});
+        comboMutacionOp = new JComboBox<>(new String[]{"Gen", "Gaussiana"});
 
         pnlParams.add(new JLabel("Pob:")); pnlParams.add(spinPob);
         pnlParams.add(new JLabel("Gen:")); pnlParams.add(spinGens);
@@ -84,28 +89,21 @@ public class VentanaPrincipal extends JFrame {
         pnlParams.add(new JLabel("Mu%:")); pnlParams.add(spinMut);
         pnlParams.add(new JLabel("El%:")); pnlParams.add(spinElite);
         pnlParams.add(new JLabel("Sel:")); pnlParams.add(comboSeleccion);
-        pnlParams.add(new JLabel("Cru:")); pnlParams.add(comboCruce);
-
-        pnlParams.add(Box.createHorizontalStrut(10)); // Espacio antes del botón
+        pnlParams.add(new JLabel("Cruce Op:")); pnlParams.add(comboCruceOp);
+        pnlParams.add(new JLabel("Mutación:")); pnlParams.add(comboMutacionOp);
 
         btnEjecutar = new JButton("EJECUTAR AG");
         btnEjecutar.setPreferredSize(new Dimension(130, 30));
         btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 11));
-        btnEjecutar.setBackground(new Color(39, 174, 96)); // Un verde más elegante
+        btnEjecutar.setBackground(new Color(39, 174, 96));
         btnEjecutar.setForeground(Color.WHITE);
         btnEjecutar.setOpaque(true);
-        btnEjecutar.setBorderPainted(false); // Opcional: quita el borde para un look más moderno
-        btnEjecutar.setFocusPainted(false);  // Quita el recuadro de puntos al hacer clic
-        // ----------------------------------------------------
-        
+        btnEjecutar.setBorderPainted(false);
+        btnEjecutar.setFocusPainted(false);
+        pnlParams.add(Box.createHorizontalStrut(10));
         pnlParams.add(btnEjecutar);
-        
-     // 1. Añadimos en la sección de parámetros AG:
-        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta", "Estocástico", "Truncamiento", "Restos"});
-        pnlParams.add(new JLabel("Sel:")); 
-        pnlParams.add(comboSeleccion);
-        
-        // ===== 3. MAPA ÚNICO Y RESULTADOS (Equilibrados) =====
+
+        // ===== MAPA Y RESULTADOS =====
         panelMapa = new PanelMapaReal();
         panelMapa.setBounds(20, 140, 520, 390); 
         panelMapa.setBorder(BorderFactory.createTitledBorder("Visualización"));
@@ -119,7 +117,6 @@ public class VentanaPrincipal extends JFrame {
         scroll.setBorder(BorderFactory.createTitledBorder("Consola de Resultados"));
         contentPane.add(scroll);
 
-        // ===== 4. ETIQUETAS ESTADÍSTICAS =====
         lblGenActual = new JLabel("Generación: 0");
         lblGenActual.setFont(new Font("Tahoma", Font.BOLD, 14));
         lblGenActual.setBounds(30, 540, 200, 25);
@@ -131,7 +128,6 @@ public class VentanaPrincipal extends JFrame {
         lblMejorFitness.setBounds(250, 540, 400, 25);
         contentPane.add(lblMejorFitness);
 
-        // ===== 5. GRÁFICA =====
         panelGrafica = new PanelGrafica();
         panelGrafica.setBounds(20, 575, 1090, 170);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
@@ -139,78 +135,78 @@ public class VentanaPrincipal extends JFrame {
 
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
-
         cargarEscenario(0);
     }
 
+    // --- EJECUTAR AG CORREGIDO ---
     private void ejecutarAG(ActionEvent e) {
 
-    	   new Thread(() -> {
-               SwingUtilities.invokeLater(() -> {
-                   panelGrafica.limpiar();
-                   btnEjecutar.setEnabled(false);
-                   textAreaResultados.setText("Ejecutando algoritmo...\n");
-               });
+        new Thread(() -> {
+            SwingUtilities.invokeLater(() -> {
+                panelGrafica.limpiar();
+                btnEjecutar.setEnabled(false);
+                textAreaResultados.setText("Ejecutando algoritmo...\n");
+            });
 
-               int escIdx = comboEscenario.getSelectedIndex();
-               EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
-               Mapa mapaActual = (Mapa) datos.mapaObj;
-               mapaActual.setMatrizImportancia(datos.importancia);
+            int escIdx = comboEscenario.getSelectedIndex();
+            EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
+            Mapa mapaActual = (Mapa) datos.mapaObj;
+            mapaActual.setMatrizImportancia(datos.importancia);
 
-               int tPob = (int) spinPob.getValue();
-               int tGen = (int) spinGens.getValue();
-               double pCruce = (int) spinCruce.getValue() / 100.0;
-               double pMut = (int) spinMut.getValue() / 100.0;
-               double pElite = (int) spinElite.getValue() / 100.0;
-               boolean ponderado = chckbxPonderado.isSelected();
+            int tPob = (int) spinPob.getValue();
+            int tGen = (int) spinGens.getValue();
+            double pCruce = (int) spinCruce.getValue() / 100.0;
+            double pMut = (int) spinMut.getValue() / 100.0;
+            double pElite = (int) spinElite.getValue() / 100.0;
+            boolean ponderado = chckbxPonderado.isSelected();
 
-               if (!rdbtnReal.isSelected()) {
-            	    AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
-            	    ag.setModoPonderado(ponderado);
+            if (!rdbtnReal.isSelected()) {
+                AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+                ag.setModoPonderado(ponderado);
 
-            	    // Establecemos el método de selección según combo
-            	    switch (comboSeleccion.getSelectedIndex()) {
-            	        case 0: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TORNEO); break;
-            	        case 1: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RULETA); break;
-            	        case 2: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.ESTOCASTICO); break;
-            	        case 3: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TRUNCAMIENTO); break;
-            	        case 4: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RESTOS); break;
-            	    }
+                switch (comboSeleccion.getSelectedIndex()) {
+                    case 0: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TORNEO); break;
+                    case 1: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RULETA); break;
+                    case 2: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.ESTOCASTICO); break;
+                    case 3: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TRUNCAMIENTO); break;
+                    case 4: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RESTOS); break;
+                }
 
-            	    // Podemos elegir cruce uniforme/monopunto si quieres también desde otro combo
-            	    ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO); // por defecto
-            	    Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
-            	    SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
-               }else {
+                ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO);
+                Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
+                SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
 
-            	    AlgoritmoGeneticoReal ag = new AlgoritmoGeneticoReal(
-            	            mapaActual,
-            	            datos.rango,
-            	            datos.numCamaras,
-            	            datos.apertura,   
-            	            this
-            	    );
+            } else {
+                AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(mapaActual, datos.rango, datos.numCamaras, datos.apertura, this);
+                agReal.setModoPonderado(ponderado);
 
-            	    ag.setModoPonderado(ponderado);
-            	    ag.setConfig(tPob, pCruce, pMut, pElite);
+                switch (comboSeleccion.getSelectedIndex()) {
+                    case 0: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TORNEO); break;
+                    case 1: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RULETA); break;
+                    case 2: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.ESTOCASTICO); break;
+                    case 3: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TRUNCAMIENTO); break;
+                    case 4: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RESTOS); break;
+                }
 
-            	    // Método de selección
-            	    switch (comboSeleccion.getSelectedIndex()) {
-            	    case 0: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TORNEO); break;
-            	    case 1: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RULETA); break;
-            	    case 2: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.ESTOCASTICO); break;
-            	    case 3: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TRUNCAMIENTO); break;
-            	    case 4: ag.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RESTOS); break;
-            	}
+                switch (comboCruceOp.getSelectedIndex()) {
+                    case 0: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.MONOPUNTO); break;
+                    case 1: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.UNIFORME); break;
+                    case 2: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.ARITMETICO); break;
+                    case 3: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.BLX_ALPHA); break;
+                }
 
-            	    IndividuoReal mejor = ag.ejecutar(tGen);
+                switch (comboMutacionOp.getSelectedIndex()) {
+                    case 0: agReal.setMetodoMutacion(AlgoritmoGeneticoReal.MetodoMutacion.GEN); break;
+                    case 1: agReal.setMetodoMutacion(AlgoritmoGeneticoReal.MetodoMutacion.GAUSSIANA); break;
+                }
 
-            	    SwingUtilities.invokeLater(() ->
-            	            mostrarResultadosReal(mejor, datos.rango, datos.apertura)
-            	    );
-            	}
-               SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
-           }).start();
+                agReal.setConfig(tPob, pCruce, pMut, pElite);
+                IndividuoReal mejor = agReal.ejecutar(tGen);
+                SwingUtilities.invokeLater(() -> mostrarResultadosReal(mejor, datos.rango, datos.apertura));
+            }
+
+            SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+        }).start();
     }
     public void actualizarMapaRealEnTiempoReal(List<CamaraReal> cams, int g, double f, int r, double a) {
         SwingUtilities.invokeLater(() -> {

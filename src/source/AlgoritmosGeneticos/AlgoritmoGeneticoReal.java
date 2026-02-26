@@ -23,7 +23,14 @@ public class AlgoritmoGeneticoReal {
 
     public enum MetodoSeleccion { TORNEO, RULETA, ESTOCASTICO, TRUNCAMIENTO, RESTOS }
     private MetodoSeleccion metodoSeleccion = MetodoSeleccion.TORNEO;
-
+    
+    public enum MetodoCruce { MONOPUNTO, UNIFORME, ARITMETICO, BLX_ALPHA }
+    public enum MetodoMutacion { GEN, GAUSSIANA }
+    
+    private MetodoCruce metodoCruce = MetodoCruce.ARITMETICO;
+    private MetodoMutacion metodoMutacion = MetodoMutacion.GAUSSIANA;
+    private double blxAlpha = 0.5; // Para BLX-α
+    
     public AlgoritmoGeneticoReal(Mapa mapa, int rango, int numCamaras, double apertura, VentanaPrincipal ventana) {
         this.mapa = mapa;
         this.rango = rango;
@@ -41,26 +48,54 @@ public class AlgoritmoGeneticoReal {
 
     public void setModoPonderado(boolean valor) { this.modoPonderado = valor; }
     public void setMetodoSeleccion(MetodoSeleccion m) { this.metodoSeleccion = m; }
-
+    public void setMetodoCruce(MetodoCruce m) { this.metodoCruce = m; }
+    public void setMetodoMutacion(MetodoMutacion m) { this.metodoMutacion = m; }
+    public void setBlxAlpha(double a) { this.blxAlpha = a; }
+    
     public IndividuoReal ejecutar(int generaciones) {
+
         List<IndividuoReal> poblacion = crearPoblacionInicial();
-        IndividuoReal mejorAbsoluto = null;
+
+        //  Mejor absoluto
+        IndividuoReal mejorGlobal = poblacion.stream()
+                .max(Comparator.comparingDouble(ind -> ind.fitness))
+                .orElse(poblacion.get(0))
+                .copiar();
 
         for (int g = 0; g < generaciones; g++) {
+
+            // 1️ Calcular fitness
             for (IndividuoReal ind : poblacion) {
                 ind.fitness = calcularFitness(ind);
             }
 
-            poblacion.sort((a, b) -> Double.compare(b.fitness, a.fitness));
+            // Mejor de esta generación
+            IndividuoReal mejorGen = poblacion.stream()
+                    .max(Comparator.comparingDouble(ind -> ind.fitness))
+                    .get();
 
-            if (mejorAbsoluto == null || poblacion.get(0).fitness > mejorAbsoluto.fitness)
-                mejorAbsoluto = poblacion.get(0).copiar();
-
-            if (ventana != null) {
-                ventana.actualizarMapaRealEnTiempoReal(poblacion.get(0).camaras, g, poblacion.get(0).fitness, rango, apertura);
-                ventana.actualizarGrafica(poblacion.get(0).fitness, mejorAbsoluto.fitness, calcularMedia(poblacion));
+            // Actualizar mejor absoluto
+            if (mejorGen.fitness > mejorGlobal.fitness) {
+                mejorGlobal = mejorGen.copiar();
             }
 
+            // Media de la generación 
+            double mediaGen = poblacion.stream()
+                    .mapToDouble(ind -> ind.fitness)
+                    .average()
+                    .orElse(0.0);
+
+            // Actualizar GUI
+            if (ventana != null) {
+                ventana.actualizarMapaRealEnTiempoReal(mejorGen.camaras, g, mejorGen.fitness, rango, apertura);
+                ventana.actualizarGrafica(
+                        mejorGen.fitness,    //  mejor de la generación
+                        mejorGlobal.fitness, //  mejor absoluto
+                        mediaGen             //  media
+                );
+            }
+
+            //  Crear nueva generación
             List<IndividuoReal> nuevaPob = new ArrayList<>();
             int numElite = (int) (tamPoblacion * porcentajeElite);
             for (int i = 0; i < numElite; i++) nuevaPob.add(poblacion.get(i).copiar());
@@ -68,17 +103,15 @@ public class AlgoritmoGeneticoReal {
             while (nuevaPob.size() < tamPoblacion) {
                 IndividuoReal p1 = seleccionar(poblacion);
                 IndividuoReal p2 = seleccionar(poblacion);
-
-                IndividuoReal hijo = (random.nextDouble() < probCruce) ? cruceAritmetico(p1, p2) : p1.copiar();
+                IndividuoReal hijo = (random.nextDouble() < probCruce) ? cruzar(p1, p2) : p1.copiar();
                 if (random.nextDouble() < probMutacion) mutar(hijo);
-
                 nuevaPob.add(hijo);
             }
 
             poblacion = nuevaPob;
         }
 
-        return mejorAbsoluto;
+        return mejorGlobal;
     }
 
     private List<IndividuoReal> crearPoblacionInicial() {
@@ -122,7 +155,7 @@ public class AlgoritmoGeneticoReal {
 
                     // 2. Ángulo
                     double angCelda = Math.toDegrees(Math.atan2(dy, dx));
-                    double angDif = Math.abs(Math.floorMod((int)angCelda - (int)c.theta + 360, 360));
+                    double angDif = Math.abs((angCelda - c.theta + 360) % 360);
                     if (angDif > apertura/2 && angDif < 360 - apertura/2) continue;
 
                     // 3. Raycast (línea de visión)
@@ -234,6 +267,58 @@ public class AlgoritmoGeneticoReal {
     }
 
     // ---------------- CRUCE ----------------
+    private IndividuoReal cruzar(IndividuoReal p1, IndividuoReal p2) {
+        switch(metodoCruce) {
+            case MONOPUNTO: return cruceMonopunto(p1, p2);
+            case UNIFORME: return cruceUniforme(p1, p2);
+            case ARITMETICO: return cruceAritmetico(p1, p2);
+            case BLX_ALPHA: return cruceBLXAlpha(p1, p2);
+            default: return p1.copiar();
+        }
+    }
+
+    private IndividuoReal cruceMonopunto(IndividuoReal p1, IndividuoReal p2) {
+        IndividuoReal hijo = new IndividuoReal();
+        int punto = random.nextInt(numCamaras);
+        for (int i = 0; i < numCamaras; i++) {
+            hijo.camaras.add(i < punto ? p1.camaras.get(i).copiar() : p2.camaras.get(i).copiar());
+        }
+        return hijo;
+    }
+
+    private IndividuoReal cruceUniforme(IndividuoReal p1, IndividuoReal p2) {
+        IndividuoReal hijo = new IndividuoReal();
+        for (int i = 0; i < numCamaras; i++) {
+            CamaraReal c = (random.nextBoolean() ? p1.camaras.get(i) : p2.camaras.get(i)).copiar();
+            hijo.camaras.add(c);
+        }
+        return hijo;
+    }
+
+    private IndividuoReal cruceBLXAlpha(IndividuoReal p1, IndividuoReal p2) {
+        IndividuoReal hijo = new IndividuoReal();
+        for (int i = 0; i < numCamaras; i++) {
+            CamaraReal c1 = p1.camaras.get(i);
+            CamaraReal c2 = p2.camaras.get(i);
+            double minX = Math.min(c1.x, c2.x);
+            double maxX = Math.max(c1.x, c2.x);
+            double minY = Math.min(c1.y, c2.y);
+            double maxY = Math.max(c1.y, c2.y);
+            double minT = Math.min(c1.theta, c2.theta);
+            double maxT = Math.max(c1.theta, c2.theta);
+
+            double dx = maxX - minX;
+            double dy = maxY - minY;
+            double dt = maxT - minT;
+
+            double nx = minX - blxAlpha*dx + random.nextDouble() * (dx*(1+2*blxAlpha));
+            double ny = minY - blxAlpha*dy + random.nextDouble() * (dy*(1+2*blxAlpha));
+            double nt = minT - blxAlpha*dt + random.nextDouble() * (dt*(1+2*blxAlpha));
+
+            hijo.camaras.add(new CamaraReal(nx, ny, nt));
+        }
+        return hijo;
+    }
     private IndividuoReal cruceAritmetico(IndividuoReal p1, IndividuoReal p2) {
         IndividuoReal hijo = new IndividuoReal();
         double alpha = random.nextDouble();
@@ -250,17 +335,33 @@ public class AlgoritmoGeneticoReal {
 
     // ---------------- MUTACIÓN ----------------
     private void mutar(IndividuoReal ind) {
-        int idx = random.nextInt(ind.camaras.size());
-        CamaraReal c = ind.camaras.get(idx);
-        double nuevaX = c.x + (random.nextDouble()*2-1);
-        double nuevaY = c.y + (random.nextDouble()*2-1);
-        if (nuevaX >= 0 && nuevaX < mapa.columnas && nuevaY >= 0 && nuevaY < mapa.filas) {
-            if (!mapa.esObstaculo((int)nuevaX,(int)nuevaY)) { c.x=nuevaX; c.y=nuevaY; }
+        switch(metodoMutacion) {
+            case GEN: mutarGen(ind); break;
+            case GAUSSIANA: mutarGaussiana(ind); break;
         }
-        c.theta = (c.theta + random.nextGaussian()*15) % 360;
-        if(c.theta<0) c.theta+=360;
     }
 
+    private void mutarGen(IndividuoReal ind) {
+        int idx = random.nextInt(ind.camaras.size());
+        CamaraReal c = ind.camaras.get(idx);
+
+        double nuevaX = c.x + (random.nextDouble()*2 - 1);
+        double nuevaY = c.y + (random.nextDouble()*2 - 1);
+        if (nuevaX >= 0 && nuevaX < mapa.columnas && nuevaY >=0 && nuevaY < mapa.filas)
+            if (!mapa.esObstaculo((int)nuevaX,(int)nuevaY)) { c.x=nuevaX; c.y=nuevaY; }
+        c.theta = (c.theta + random.nextDouble()*60 - 30) % 360; // ±30° aleatorio
+    }
+
+    private void mutarGaussiana(IndividuoReal ind) {
+        int idx = random.nextInt(ind.camaras.size());
+        CamaraReal c = ind.camaras.get(idx);
+
+        double nuevaX = c.x + random.nextGaussian();
+        double nuevaY = c.y + random.nextGaussian();
+        if (nuevaX >= 0 && nuevaX < mapa.columnas && nuevaY >=0 && nuevaY < mapa.filas)
+            if (!mapa.esObstaculo((int)nuevaX,(int)nuevaY)) { c.x=nuevaX; c.y=nuevaY; }
+        c.theta = (c.theta + random.nextGaussian()*15) % 360;
+    }
     private double calcularMedia(List<IndividuoReal> pob) {
         return pob.stream().mapToDouble(ind -> ind.fitness).average().orElse(0);
     }
