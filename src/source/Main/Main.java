@@ -10,6 +10,7 @@ public class Main {
             try {
                 VentanaPrincipal ventana = new VentanaPrincipal();
                 ventana.setVisible(true);
+               
             } catch (Exception e) {
                 e.printStackTrace();
             }

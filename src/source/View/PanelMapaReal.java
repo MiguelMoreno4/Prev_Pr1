@@ -3,6 +3,7 @@ package source.View;
 import javax.swing.*;
 import source.Camaras.CamaraReal;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PanelMapaReal extends JPanel {
@@ -12,7 +13,7 @@ public class PanelMapaReal extends JPanel {
     private List<CamaraReal> camaras;
     private int rango;
     private double apertura;
-
+    private List<List<Point>> rutasDrones = new ArrayList<>();
     public PanelMapaReal() {
         setBackground(Color.WHITE);
         // Sugerencia: añadir un borde para ver los límites del panel si es necesario
@@ -30,6 +31,9 @@ public class PanelMapaReal extends JPanel {
         this.rango = rango;
         this.apertura = apertura;
         repaint();
+    }
+    public void setRutasDrones(List<List<Point>> rutas) {
+        this.rutasDrones = rutas;
     }
 
     @Override
@@ -86,6 +90,27 @@ public class PanelMapaReal extends JPanel {
                 dibujarCamarasReal(g2, cellSize, xOffset, yOffset);
             } else {
                 dibujarCamarasNormal(g2, cellSize, filas, columnas, xOffset, yOffset);
+            }
+        }
+     // ===== DIBUJAR RUTAS DRONES =====
+        if (rutasDrones != null) {
+            g2.setStroke(new BasicStroke(2));
+            Color[] colores = { Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE };
+
+            for (int d = 0; d < rutasDrones.size(); d++) {
+                List<Point> ruta = rutasDrones.get(d);
+                if (ruta.size() < 2) continue;
+                g2.setColor(colores[d % colores.length]);
+
+                for (int i = 0; i < ruta.size() - 1; i++) {
+                    Point p1 = ruta.get(i);
+                    Point p2 = ruta.get(i + 1);
+                    int x1 = xOffset + (int)((p1.x + 0.5) * cellSize);
+                    int y1 = yOffset + (int)((p1.y + 0.5) * cellSize);
+                    int x2 = xOffset + (int)((p2.x + 0.5) * cellSize);
+                    int y2 = yOffset + (int)((p2.y + 0.5) * cellSize);
+                    g2.drawLine(x1, y1, x2, y2);
+                }
             }
         }
     }

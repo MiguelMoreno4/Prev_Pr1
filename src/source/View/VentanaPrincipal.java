@@ -3,17 +3,21 @@ package source.View;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import source.AlgoritmosGeneticos.AlgoritmoGenetico;
+import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
 import source.Camaras.Camara;
 import source.Camaras.CamaraReal;
 import source.Escenarios.EscenarioDatos;
 import source.Escenarios.EscenariosFactory;
 import source.Individuos.Individuo;
+import source.Individuos.IndividuoMTSP;
 import source.Individuos.IndividuoReal;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class VentanaPrincipal extends JFrame {
 
@@ -136,6 +140,9 @@ public class VentanaPrincipal extends JFrame {
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
         cargarEscenario(0);
+        
+        //probarAStarMapa10x10();
+        probarAGMTSPMapa10x10();
     }
 
     // --- EJECUTAR AG CORREGIDO ---
@@ -152,7 +159,8 @@ public class VentanaPrincipal extends JFrame {
             EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
             Mapa mapaActual = (Mapa) datos.mapaObj;
             mapaActual.setMatrizImportancia(datos.importancia);
-
+       
+            
             int tPob = (int) spinPob.getValue();
             int tGen = (int) spinGens.getValue();
             double pCruce = (int) spinCruce.getValue() / 100.0;
@@ -262,7 +270,79 @@ public class VentanaPrincipal extends JFrame {
         panelMapa.setCamaras(lista, 1, 0);
         panelMapa.repaint();
     }
+ // --- PRUEBA A* MAPA 10x10 ---
+    private void probarAStarMapa10x10() {
+        EscenarioDatos datos = EscenariosFactory.cargar(0); // mapa1
+        Mapa mapaActual = (Mapa) datos.mapaObj;
+        mapaActual.setMatrizImportancia(datos.importancia);
+        AStar aStar = new AStar(mapaActual);
 
+        // Crear conjunto vacío de cámaras para penalización
+        Set<String> posicionesCamaras = new HashSet<>();
+
+        // Coordenadas seguras dentro del mapa 10x10
+        int origenX = 0, origenY = 0;
+        int destinoX = 9, destinoY = 9;
+
+        double coste = aStar.calcularCoste(origenX, origenY, destinoX, destinoY, posicionesCamaras);
+        System.out.println("Coste A* mapa1 (0,0 → 9,9) = " + coste);
+    }
+    private void probarAGMTSPMapa10x10() {
+        EscenarioDatos datos = EscenariosFactory.cargar(0); // mapa1
+        Mapa mapaActual = (Mapa) datos.mapaObj;
+        mapaActual.setMatrizImportancia(datos.importancia);
+
+        // Crear puntos de control del mapa
+        List<Camara> puntosControl = new ArrayList<>();
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                if (!mapaActual.esObstaculo(x, y)) {
+                    puntosControl.add(new Camara(x, y));
+                }
+            }
+        }
+
+        int numDrones = 2;
+        long semilla = 12345L;
+
+        AlgoritmoGeneticoMTSP agMTSP = new AlgoritmoGeneticoMTSP(
+            mapaActual,
+            puntosControl,
+            numDrones,
+            semilla,
+            this
+        );
+
+        // Ejecutar pocas generaciones solo para prueba
+        IndividuoMTSP mejor = agMTSP.ejecutar(30, 0.8, 0.2);
+
+        textAreaResultados.append("\n=== PRUEBA AG MTSP ===\n");
+        textAreaResultados.append("Mejor Fitness: " + 
+                String.format("%.2f", mejor.fitness) + "\n");
+
+        List<List<Integer>> rutas = agMTSP.decodificar(mejor);
+
+        // Convertir a puntos visuales
+        List<List<Point>> rutasVisual = new ArrayList<>();
+
+        for (int d = 0; d < rutas.size(); d++) {
+
+            List<Point> rutaDrone = new ArrayList<>();
+
+            for (int id : rutas.get(d)) {
+                Camara c = puntosControl.get(id);
+                rutaDrone.add(new Point(c.x, c.y));
+                textAreaResultados.append(
+                    String.format("Drone %d -> (%d,%d)\n", 
+                    d+1, c.x, c.y));
+            }
+
+            rutasVisual.add(rutaDrone);
+        }
+
+        panelMapa.setRutasDrones(rutasVisual);
+        panelMapa.repaint();
+    }
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         EventQueue.invokeLater(() -> {
