@@ -7,6 +7,7 @@ import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
 import source.Camaras.Camara;
 import source.Camaras.CamaraReal;
+import source.Camaras.Dron;
 import source.Escenarios.EscenarioDatos;
 import source.Escenarios.EscenariosFactory;
 import source.Individuos.Individuo;
@@ -141,8 +142,7 @@ public class VentanaPrincipal extends JFrame {
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
         cargarEscenario(0);
         
-        //probarAStarMapa10x10();
-        probarAGMTSPMapa10x10();
+        
     }
 
     // --- EJECUTAR AG CORREGIDO ---
@@ -182,6 +182,32 @@ public class VentanaPrincipal extends JFrame {
 
                 ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO);
                 Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
+
+                List<Camara> camarasFinales = new ArrayList<>();
+                if (!rdbtnReal.isSelected()) {
+                    for (Camara c : mejor.camaras)
+                        camarasFinales.add(new Camara(c.x, c.y));
+                } //else {
+                    //for (CamaraReal c : mejor.camaras)
+                   //     camarasFinales.add(new Camara(c.x, c.y));
+               // }
+
+
+             // Crear instancia MTSP
+                AlgoritmoGeneticoMTSP agMTSP = new AlgoritmoGeneticoMTSP(
+                    mapaActual,
+                    camarasFinales,
+                    5, // número de drones
+                    System.currentTimeMillis(),
+                    this
+                );
+
+                // Crear un IndividuoMTSP decodificado
+                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
+
+                // Mostrar rutas reales
+                mostrarRutasRealesMTSP(agMTSP, mtsp, camarasFinales, mapaActual);
+          
                 SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
 
             } else {
@@ -212,7 +238,7 @@ public class VentanaPrincipal extends JFrame {
                 IndividuoReal mejor = agReal.ejecutar(tGen);
                 SwingUtilities.invokeLater(() -> mostrarResultadosReal(mejor, datos.rango, datos.apertura));
             }
-
+           
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
         }).start();
     }
@@ -270,79 +296,69 @@ public class VentanaPrincipal extends JFrame {
         panelMapa.setCamaras(lista, 1, 0);
         panelMapa.repaint();
     }
- // --- PRUEBA A* MAPA 10x10 ---
-    private void probarAStarMapa10x10() {
-        EscenarioDatos datos = EscenariosFactory.cargar(0); // mapa1
-        Mapa mapaActual = (Mapa) datos.mapaObj;
-        mapaActual.setMatrizImportancia(datos.importancia);
+    private void mostrarRutasRealesMTSP(
+            AlgoritmoGeneticoMTSP agMTSP,
+            IndividuoMTSP mejor,
+            List<Camara> puntosControl,
+            Mapa mapaActual) {
+
         AStar aStar = new AStar(mapaActual);
 
-        // Crear conjunto vacío de cámaras para penalización
-        Set<String> posicionesCamaras = new HashSet<>();
-
-        // Coordenadas seguras dentro del mapa 10x10
-        int origenX = 0, origenY = 0;
-        int destinoX = 9, destinoY = 9;
-
-        double coste = aStar.calcularCoste(origenX, origenY, destinoX, destinoY, posicionesCamaras);
-        System.out.println("Coste A* mapa1 (0,0 → 9,9) = " + coste);
-    }
-    private void probarAGMTSPMapa10x10() {
-        EscenarioDatos datos = EscenariosFactory.cargar(0); // mapa1
-        Mapa mapaActual = (Mapa) datos.mapaObj;
-        mapaActual.setMatrizImportancia(datos.importancia);
-
-        // Crear puntos de control del mapa
-        List<Camara> puntosControl = new ArrayList<>();
-        for (int y = 0; y < 10; y++) {
-            for (int x = 0; x < 10; x++) {
-                if (!mapaActual.esObstaculo(x, y)) {
-                    puntosControl.add(new Camara(x, y));
-                }
-            }
-        }
-
-        int numDrones = 2;
-        long semilla = 12345L;
-
-        AlgoritmoGeneticoMTSP agMTSP = new AlgoritmoGeneticoMTSP(
-            mapaActual,
-            puntosControl,
-            numDrones,
-            semilla,
-            this
-        );
-
-        // Ejecutar pocas generaciones solo para prueba
-        IndividuoMTSP mejor = agMTSP.ejecutar(30, 0.8, 0.2);
-
-        textAreaResultados.append("\n=== PRUEBA AG MTSP ===\n");
-        textAreaResultados.append("Mejor Fitness: " + 
-                String.format("%.2f", mejor.fitness) + "\n");
+        List<List<Point>> rutasVisual = new ArrayList<>();
 
         List<List<Integer>> rutas = agMTSP.decodificar(mejor);
 
-        // Convertir a puntos visuales
-        List<List<Point>> rutasVisual = new ArrayList<>();
+        Set<String> posicionesCamaras = new HashSet<>();
+        for (Camara c : puntosControl)
+            posicionesCamaras.add(c.x + "," + c.y);
 
         for (int d = 0; d < rutas.size(); d++) {
 
-            List<Point> rutaDrone = new ArrayList<>();
+            Dron dron = agMTSP.getFlota().get(d);
+            List<Integer> ruta = rutas.get(d);
 
-            for (int id : rutas.get(d)) {
-                Camara c = puntosControl.get(id);
-                rutaDrone.add(new Point(c.x, c.y));
-                textAreaResultados.append(
-                    String.format("Drone %d -> (%d,%d)\n", 
-                    d+1, c.x, c.y));
+            List<Point> caminoCompleto = new ArrayList<>();
+
+            int xActual = dron.getBaseX();
+            int yActual = dron.getBaseY();
+
+            for (int idCam : ruta) {
+
+                Camara destino = puntosControl.get(idCam);
+
+                List<Point> camino = aStar.calcularRuta(
+                        xActual, yActual,
+                        destino.x, destino.y,
+                        posicionesCamaras
+                );
+
+                if (camino != null)
+                    caminoCompleto.addAll(camino);
+
+                xActual = destino.x;
+                yActual = destino.y;
             }
 
-            rutasVisual.add(rutaDrone);
+            // vuelta a base
+            List<Point> vuelta = aStar.calcularRuta(
+                    xActual, yActual,
+                    dron.getBaseX(), dron.getBaseY(),
+                    posicionesCamaras
+            );
+
+            if (vuelta != null)
+                caminoCompleto.addAll(vuelta);
+
+            rutasVisual.add(caminoCompleto);
         }
 
         panelMapa.setRutasDrones(rutasVisual);
         panelMapa.repaint();
     }
+   // private IndividuoMTSP convertirAMTSP(List<Camara> camaras, int numDrones) {
+    //    AlgoritmoGeneticoMTSP tmpMTSP = new AlgoritmoGeneticoMTSP(null, camaras, numDrones, 0, this);
+    //    return tmpMTSP.decodificar(camaras); // Devuelve IndividuoMTSP válido
+   // }
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         EventQueue.invokeLater(() -> {

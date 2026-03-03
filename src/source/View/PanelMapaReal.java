@@ -4,6 +4,7 @@ import javax.swing.*;
 import source.Camaras.CamaraReal;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class PanelMapaReal extends JPanel {
@@ -35,7 +36,9 @@ public class PanelMapaReal extends JPanel {
     public void setRutasDrones(List<List<Point>> rutas) {
         this.rutasDrones = rutas;
     }
-
+    private List<Color> coloresDrones = Arrays.asList(
+    	    Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE, Color.MAGENTA
+    	);
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -92,25 +95,37 @@ public class PanelMapaReal extends JPanel {
                 dibujarCamarasNormal(g2, cellSize, filas, columnas, xOffset, yOffset);
             }
         }
-     // ===== DIBUJAR RUTAS DRONES =====
+     // ===== DIBUJAR DRONES Y SU RUTA =====
         if (rutasDrones != null) {
-            g2.setStroke(new BasicStroke(2));
-            Color[] colores = { Color.RED, Color.BLUE, Color.GREEN, Color.ORANGE };
-
+            g2.setStroke(new BasicStroke(2)); // ancho de línea para rutas
             for (int d = 0; d < rutasDrones.size(); d++) {
                 List<Point> ruta = rutasDrones.get(d);
-                if (ruta.size() < 2) continue;
-                g2.setColor(colores[d % colores.length]);
+                if (ruta.isEmpty()) continue;
 
+                Color colorDron = coloresDrones.get(d % coloresDrones.size());
+                g2.setColor(colorDron);
+
+                // Dibujar la ruta completa del dron
                 for (int i = 0; i < ruta.size() - 1; i++) {
                     Point p1 = ruta.get(i);
                     Point p2 = ruta.get(i + 1);
-                    int x1 = xOffset + (int)((p1.x + 0.5) * cellSize);
-                    int y1 = yOffset + (int)((p1.y + 0.5) * cellSize);
-                    int x2 = xOffset + (int)((p2.x + 0.5) * cellSize);
-                    int y2 = yOffset + (int)((p2.y + 0.5) * cellSize);
+                    int x1 = xOffset + p1.x * cellSize + cellSize / 2;
+                    int y1 = yOffset + p1.y * cellSize + cellSize / 2;
+                    int x2 = xOffset + p2.x * cellSize + cellSize / 2;
+                    int y2 = yOffset + p2.y * cellSize + cellSize / 2;
                     g2.drawLine(x1, y1, x2, y2);
                 }
+
+                // Dibujar dron en la última posición de la ruta
+                Point ultima = ruta.get(ruta.size() - 1);
+                int x = xOffset + ultima.x * cellSize + cellSize / 2;
+                int y = yOffset + ultima.y * cellSize + cellSize / 2;
+                int r = cellSize / 2; // radio del dron
+
+                g2.setColor(colorDron);
+                g2.fillOval(x - r / 2, y - r / 2, r, r);
+                g2.setColor(Color.WHITE);
+                g2.drawOval(x - r / 2, y - r / 2, r, r);
             }
         }
     }
