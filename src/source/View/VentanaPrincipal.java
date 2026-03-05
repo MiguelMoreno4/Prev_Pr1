@@ -204,7 +204,9 @@ public class VentanaPrincipal extends JFrame {
 
                 // Crear un IndividuoMTSP decodificado
                 IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
+                List<List<Integer>> rutas = agMTSP.decodificar(mtsp);
 
+              
                 // Mostrar rutas reales
                 mostrarRutasRealesMTSP(agMTSP, mtsp, camarasFinales, mapaActual);
           
