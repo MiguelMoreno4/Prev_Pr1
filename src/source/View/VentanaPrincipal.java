@@ -6,6 +6,15 @@ import source.AlgoritmosGeneticos.AlgoritmoGenetico;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
 import source.Camaras.Camara;
+package source.View;
+
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+
+import source.AlgoritmosGeneticos.AlgoritmoGenetico;
+import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
+import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
+import source.Camaras.Camara;
 import source.Camaras.CamaraReal;
 import source.Camaras.Dron;
 import source.Escenarios.EscenarioDatos;
@@ -13,114 +22,215 @@ import source.Escenarios.EscenariosFactory;
 import source.Individuos.Individuo;
 import source.Individuos.IndividuoMTSP;
 import source.Individuos.IndividuoReal;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class VentanaPrincipal extends JFrame {
 
     private JPanel contentPane;
-    private PanelMapaReal panelMapa; 
+    private PanelMapaReal panelMapa;
     private JButton btnEjecutar;
     private JCheckBox chckbxPonderado;
     private JComboBox<String> comboEscenario;
+
     private JRadioButton rdbtnNormal, rdbtnReal;
+
     private JTextArea textAreaResultados;
     private PanelGrafica panelGrafica;
 
     private JLabel lblGenActual, lblMejorFitness;
+
     private JSpinner spinPob, spinGens, spinCruce, spinMut, spinElite;
-    private JComboBox<String> comboSeleccion, comboCruce;
-   
-    
- // --- Atributos de clase ---
-   // private JComboBox<String> comboSeleccion;
+
+    private JComboBox<String> comboSeleccion;
     private JComboBox<String> comboCruceOp;
     private JComboBox<String> comboMutacionOp;
 
+    // NUEVOS CONTROLES
+    private JSpinner spinSeed;
+    private JSpinner spinDrones;
+
     public VentanaPrincipal() {
+
         setTitle("Optimización de Cámaras - Panel de Control AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(50, 50, 1150, 800); 
+        setBounds(50, 50, 1150, 800);
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
         setContentPane(contentPane);
 
-        // ===== BLOQUE CONFIGURACIÓN SUPERIOR =====
+        // ===============================
+        // PANEL CONFIGURACION SUPERIOR
+        // ===============================
+
         JPanel pnlConfig = new JPanel();
         pnlConfig.setBounds(20, 10, 1090, 50);
         pnlConfig.setBorder(BorderFactory.createEtchedBorder());
         pnlConfig.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
         contentPane.add(pnlConfig);
 
-        comboEscenario = new JComboBox<>(new String[]{"Escenario 1 - Museo", "Escenario 2 - Pasillos", "Escenario 3 - Supermercado"});
+        comboEscenario = new JComboBox<>(new String[]{
+                "Escenario 1 - Museo",
+                "Escenario 2 - Pasillos",
+                "Escenario 3 - Supermercado"
+        });
+
+        spinSeed = new JSpinner(new SpinnerNumberModel(1, 1, 9999999, 1));
+        spinSeed.setPreferredSize(new Dimension(80, 22));
+
+        spinDrones = new JSpinner(new SpinnerNumberModel(3, 1, 5, 1));
+        spinDrones.setPreferredSize(new Dimension(50, 22));
+
         rdbtnNormal = new JRadioButton("Binario", true);
         rdbtnReal = new JRadioButton("Real");
-        ButtonGroup grupoModo = new ButtonGroup();
-        grupoModo.add(rdbtnNormal); grupoModo.add(rdbtnReal);
 
-        pnlConfig.add(new JLabel("Escenario:")); pnlConfig.add(comboEscenario);
-        pnlConfig.add(Box.createHorizontalStrut(20));
-        pnlConfig.add(new JLabel("Tipo:")); pnlConfig.add(rdbtnNormal); pnlConfig.add(rdbtnReal);
-        pnlConfig.add(Box.createHorizontalStrut(20));
+        ButtonGroup grupoModo = new ButtonGroup();
+        grupoModo.add(rdbtnNormal);
+        grupoModo.add(rdbtnReal);
+
         chckbxPonderado = new JCheckBox("Ponderado");
+
+        pnlConfig.add(new JLabel("Escenario:"));
+        pnlConfig.add(comboEscenario);
+
+        pnlConfig.add(new JLabel("Seed:"));
+        pnlConfig.add(spinSeed);
+
+        pnlConfig.add(new JLabel("Drones:"));
+        pnlConfig.add(spinDrones);
+
+        pnlConfig.add(new JLabel("Tipo:"));
+        pnlConfig.add(rdbtnNormal);
+        pnlConfig.add(rdbtnReal);
+
         pnlConfig.add(chckbxPonderado);
 
-        // ===== BLOQUE PARÁMETROS AG =====
+        // ===============================
+        // PARAMETROS AG
+        // ===============================
+
         JPanel pnlParams = new JPanel();
         pnlParams.setBounds(20, 65, 1090, 65);
-        pnlParams.setBorder(BorderFactory.createTitledBorder(null, "Configuración del Algoritmo", TitledBorder.LEADING, TitledBorder.TOP, new Font("Tahoma", Font.BOLD, 11)));
+
+        pnlParams.setBorder(
+                BorderFactory.createTitledBorder(
+                        null,
+                        "Configuración del Algoritmo",
+                        TitledBorder.LEADING,
+                        TitledBorder.TOP,
+                        new Font("Tahoma", Font.BOLD, 11)
+                )
+        );
+
         pnlParams.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 5));
         contentPane.add(pnlParams);
 
         Dimension dimSpin = new Dimension(50, 22);
-        spinPob = new JSpinner(new SpinnerNumberModel(100, 10, 1000, 10)); spinPob.setPreferredSize(dimSpin);
-        spinGens = new JSpinner(new SpinnerNumberModel(200, 1, 5000, 50)); spinGens.setPreferredSize(dimSpin);
-        spinCruce = new JSpinner(new SpinnerNumberModel(60, 0, 100, 5)); spinCruce.setPreferredSize(dimSpin);
-        spinMut = new JSpinner(new SpinnerNumberModel(5, 0, 100, 1)); spinMut.setPreferredSize(dimSpin);
-        spinElite = new JSpinner(new SpinnerNumberModel(5, 0, 50, 1)); spinElite.setPreferredSize(dimSpin);
 
-        comboSeleccion = new JComboBox<>(new String[]{"Torneo", "Ruleta", "Estocástico", "Truncamiento", "Restos"});
-        comboCruceOp = new JComboBox<>(new String[]{"Monopunto", "Uniforme", "Aritmético", "BLX-α"});
-        comboMutacionOp = new JComboBox<>(new String[]{"Gen", "Gaussiana"});
+        spinPob = new JSpinner(new SpinnerNumberModel(100, 10, 1000, 10));
+        spinPob.setPreferredSize(dimSpin);
 
-        pnlParams.add(new JLabel("Pob:")); pnlParams.add(spinPob);
-        pnlParams.add(new JLabel("Gen:")); pnlParams.add(spinGens);
-        pnlParams.add(new JLabel("Cr%:")); pnlParams.add(spinCruce);
-        pnlParams.add(new JLabel("Mu%:")); pnlParams.add(spinMut);
-        pnlParams.add(new JLabel("El%:")); pnlParams.add(spinElite);
-        pnlParams.add(new JLabel("Sel:")); pnlParams.add(comboSeleccion);
-        pnlParams.add(new JLabel("Cruce Op:")); pnlParams.add(comboCruceOp);
-        pnlParams.add(new JLabel("Mutación:")); pnlParams.add(comboMutacionOp);
+        spinGens = new JSpinner(new SpinnerNumberModel(200, 1, 5000, 50));
+        spinGens.setPreferredSize(dimSpin);
+
+        spinCruce = new JSpinner(new SpinnerNumberModel(60, 0, 100, 5));
+        spinCruce.setPreferredSize(dimSpin);
+
+        spinMut = new JSpinner(new SpinnerNumberModel(5, 0, 100, 1));
+        spinMut.setPreferredSize(dimSpin);
+
+        spinElite = new JSpinner(new SpinnerNumberModel(5, 0, 50, 1));
+        spinElite.setPreferredSize(dimSpin);
+
+        comboSeleccion = new JComboBox<>(new String[]{
+                "Torneo",
+                "Ruleta",
+                "Estocástico",
+                "Restos",
+                "Ranking",
+                "Truncamiento"
+        });
+
+        comboCruceOp = new JComboBox<>(new String[]{
+                "PMX",
+                "OX",
+                "OXPP",
+                "CX",
+                "ERX",
+                "Ordinal",
+                "Inventado"
+        });
+
+        comboMutacionOp = new JComboBox<>(new String[]{
+                "Inserción",
+                "Intercambio",
+                "Inversión",
+                "Heurística",
+                "Propia"
+        });
+
+        pnlParams.add(new JLabel("Pob:"));
+        pnlParams.add(spinPob);
+
+        pnlParams.add(new JLabel("Gen:"));
+        pnlParams.add(spinGens);
+
+        pnlParams.add(new JLabel("Cr%:"));
+        pnlParams.add(spinCruce);
+
+        pnlParams.add(new JLabel("Mu%:"));
+        pnlParams.add(spinMut);
+
+        pnlParams.add(new JLabel("El%:"));
+        pnlParams.add(spinElite);
+
+        pnlParams.add(new JLabel("Sel:"));
+        pnlParams.add(comboSeleccion);
+
+        pnlParams.add(new JLabel("Cruce:"));
+        pnlParams.add(comboCruceOp);
+
+        pnlParams.add(new JLabel("Mutación:"));
+        pnlParams.add(comboMutacionOp);
 
         btnEjecutar = new JButton("EJECUTAR AG");
+
         btnEjecutar.setPreferredSize(new Dimension(130, 30));
         btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 11));
         btnEjecutar.setBackground(new Color(39, 174, 96));
         btnEjecutar.setForeground(Color.WHITE);
-        btnEjecutar.setOpaque(true);
-        btnEjecutar.setBorderPainted(false);
-        btnEjecutar.setFocusPainted(false);
-        pnlParams.add(Box.createHorizontalStrut(10));
+
         pnlParams.add(btnEjecutar);
 
-        // ===== MAPA Y RESULTADOS =====
+        // ===============================
+        // MAPA
+        // ===============================
+
         panelMapa = new PanelMapaReal();
-        panelMapa.setBounds(20, 140, 520, 390); 
+        panelMapa.setBounds(20, 140, 520, 390);
         panelMapa.setBorder(BorderFactory.createTitledBorder("Visualización"));
         contentPane.add(panelMapa);
+
+        // ===============================
+        // CONSOLA
+        // ===============================
 
         textAreaResultados = new JTextArea();
         textAreaResultados.setFont(new Font("Monospaced", Font.PLAIN, 12));
         textAreaResultados.setEditable(false);
+
         JScrollPane scroll = new JScrollPane(textAreaResultados);
-        scroll.setBounds(555, 140, 555, 390); 
+        scroll.setBounds(555, 140, 555, 390);
         scroll.setBorder(BorderFactory.createTitledBorder("Consola de Resultados"));
+
         contentPane.add(scroll);
+
+        // ===============================
+        // ESTADO
+        // ===============================
 
         lblGenActual = new JLabel("Generación: 0");
         lblGenActual.setFont(new Font("Tahoma", Font.BOLD, 14));
@@ -133,6 +243,10 @@ public class VentanaPrincipal extends JFrame {
         lblMejorFitness.setBounds(250, 540, 400, 25);
         contentPane.add(lblMejorFitness);
 
+        // ===============================
+        // GRAFICA
+        // ===============================
+
         panelGrafica = new PanelGrafica();
         panelGrafica.setBounds(20, 575, 1090, 170);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
@@ -140,110 +254,138 @@ public class VentanaPrincipal extends JFrame {
 
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
+
         cargarEscenario(0);
-        
-        
     }
 
-    // --- EJECUTAR AG CORREGIDO ---
+    // =====================================
+    // EJECUTAR ALGORITMO
+    // =====================================
+
     private void ejecutarAG(ActionEvent e) {
 
         new Thread(() -> {
+
             SwingUtilities.invokeLater(() -> {
+
                 panelGrafica.limpiar();
                 btnEjecutar.setEnabled(false);
                 textAreaResultados.setText("Ejecutando algoritmo...\n");
+
             });
 
             int escIdx = comboEscenario.getSelectedIndex();
+
             EscenarioDatos datos = EscenariosFactory.cargar(escIdx);
+
             Mapa mapaActual = (Mapa) datos.mapaObj;
+
             mapaActual.setMatrizImportancia(datos.importancia);
-       
-            
+
+            int numDrones = (int) spinDrones.getValue();
+            long seed = ((Number) spinSeed.getValue()).longValue();
+
             int tPob = (int) spinPob.getValue();
             int tGen = (int) spinGens.getValue();
+
             double pCruce = (int) spinCruce.getValue() / 100.0;
             double pMut = (int) spinMut.getValue() / 100.0;
             double pElite = (int) spinElite.getValue() / 100.0;
+
             boolean ponderado = chckbxPonderado.isSelected();
 
+            // -------------------------
+            // AG BINARIO
+            // -------------------------
+
             if (!rdbtnReal.isSelected()) {
-                AlgoritmoGenetico ag = new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+
+                AlgoritmoGenetico ag =
+                        new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+
                 ag.setModoPonderado(ponderado);
 
-                switch (comboSeleccion.getSelectedIndex()) {
-                    case 0: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TORNEO); break;
-                    case 1: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RULETA); break;
-                    case 2: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.ESTOCASTICO); break;
-                    case 3: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.TRUNCAMIENTO); break;
-                    case 4: ag.setMetodoSeleccion(AlgoritmoGenetico.MetodoSeleccion.RESTOS); break;
-                }
-
-                ag.setMetodoCruce(AlgoritmoGenetico.MetodoCruce.MONOPUNTO);
                 Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
 
                 List<Camara> camarasFinales = new ArrayList<>();
-                if (!rdbtnReal.isSelected()) {
-                    for (Camara c : mejor.camaras)
-                        camarasFinales.add(new Camara(c.x, c.y));
-                } //else {
-                    //for (CamaraReal c : mejor.camaras)
-                   //     camarasFinales.add(new Camara(c.x, c.y));
-               // }
 
+                for (Camara c : mejor.camaras)
+                    camarasFinales.add(new Camara(c.x, c.y));
 
-             // Crear instancia MTSP
-                AlgoritmoGeneticoMTSP agMTSP = new AlgoritmoGeneticoMTSP(
-                    mapaActual,
-                    camarasFinales,
-                    5, // número de drones
-                    System.currentTimeMillis(),
-                    this
+                AlgoritmoGeneticoMTSP agMTSP =
+                        new AlgoritmoGeneticoMTSP(
+                                mapaActual,
+                                camarasFinales,
+                                numDrones,
+                                seed,
+                                this
+                        );
+
+                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
+
+                mostrarRutasRealesMTSP(
+                        agMTSP,
+                        mtsp,
+                        camarasFinales,
+                        mapaActual
                 );
 
-                // Crear un IndividuoMTSP decodificado
-                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
-                List<List<Integer>> rutas = agMTSP.decodificar(mtsp);
-
-              
-                // Mostrar rutas reales
-                mostrarRutasRealesMTSP(agMTSP, mtsp, camarasFinales, mapaActual);
-          
                 SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
+            }
 
-            } else {
-                AlgoritmoGeneticoReal agReal = new AlgoritmoGeneticoReal(mapaActual, datos.rango, datos.numCamaras, datos.apertura, this);
+            // -------------------------
+            // AG REAL
+            // -------------------------
+
+            else {
+
+                AlgoritmoGeneticoReal agReal =
+                        new AlgoritmoGeneticoReal(
+                                mapaActual,
+                                datos.rango,
+                                datos.numCamaras,
+                                datos.apertura,
+                                this
+                        );
+
                 agReal.setModoPonderado(ponderado);
 
-                switch (comboSeleccion.getSelectedIndex()) {
-                    case 0: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TORNEO); break;
-                    case 1: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RULETA); break;
-                    case 2: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.ESTOCASTICO); break;
-                    case 3: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.TRUNCAMIENTO); break;
-                    case 4: agReal.setMetodoSeleccion(AlgoritmoGeneticoReal.MetodoSeleccion.RESTOS); break;
-                }
-
-                switch (comboCruceOp.getSelectedIndex()) {
-                    case 0: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.MONOPUNTO); break;
-                    case 1: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.UNIFORME); break;
-                    case 2: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.ARITMETICO); break;
-                    case 3: agReal.setMetodoCruce(AlgoritmoGeneticoReal.MetodoCruce.BLX_ALPHA); break;
-                }
-
-                switch (comboMutacionOp.getSelectedIndex()) {
-                    case 0: agReal.setMetodoMutacion(AlgoritmoGeneticoReal.MetodoMutacion.GEN); break;
-                    case 1: agReal.setMetodoMutacion(AlgoritmoGeneticoReal.MetodoMutacion.GAUSSIANA); break;
-                }
-
                 agReal.setConfig(tPob, pCruce, pMut, pElite);
+
                 IndividuoReal mejor = agReal.ejecutar(tGen);
-                SwingUtilities.invokeLater(() -> mostrarResultadosReal(mejor, datos.rango, datos.apertura));
+
+                List<Camara> camarasFinales = new ArrayList<>();
+
+                for (CamaraReal c : mejor.camaras)
+                    camarasFinales.add(new Camara(c.getX(), c.getY()));
+
+                AlgoritmoGeneticoMTSP agMTSP =
+                        new AlgoritmoGeneticoMTSP(
+                                mapaActual,
+                                camarasFinales,
+                                numDrones,
+                                seed,
+                                this
+                        );
+
+                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
+
+                mostrarRutasRealesMTSP(
+                        agMTSP,
+                        mtsp,
+                        camarasFinales,
+                        mapaActual
+                );
+
+                SwingUtilities.invokeLater(() ->
+                        mostrarResultadosReal(mejor, datos.rango, datos.apertura));
             }
-           
+
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+
         }).start();
     }
+
     public void actualizarMapaRealEnTiempoReal(List<CamaraReal> cams, int g, double f, int r, double a) {
         SwingUtilities.invokeLater(() -> {
             panelMapa.setCamaras(cams, r, a);

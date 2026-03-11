@@ -15,4 +15,10 @@ public class CamaraReal {
     public CamaraReal copiar() {
         return new CamaraReal(x, y, theta);
     }
+    public int getX() {
+    	return (int) Math.round(x);
+    }
+    public int getY() {
+    	return (int) Math.round(y);
+    }
 }
