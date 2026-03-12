@@ -1,15 +1,11 @@
 package source.View;
 
-import javax.swing.*;
-import javax.swing.border.TitledBorder;
-import source.AlgoritmosGeneticos.AlgoritmoGenetico;
-import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
-import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
-import source.Camaras.Camara;
-package source.View;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 import source.AlgoritmosGeneticos.AlgoritmoGenetico;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
@@ -26,6 +22,7 @@ import source.Individuos.IndividuoReal;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.*;
+import java.util.List;
 
 public class VentanaPrincipal extends JFrame {
 
@@ -38,6 +35,7 @@ public class VentanaPrincipal extends JFrame {
     private JRadioButton rdbtnNormal, rdbtnReal;
 
     private JTextArea textAreaResultados;
+    private JTextArea textAreaRutas;
     private PanelGrafica panelGrafica;
 
     private JLabel lblGenActual, lblMejorFitness;
@@ -47,7 +45,9 @@ public class VentanaPrincipal extends JFrame {
     private JComboBox<String> comboSeleccion;
     private JComboBox<String> comboCruceOp;
     private JComboBox<String> comboMutacionOp;
-
+    
+    private JTextPane textPaneCromosoma;
+    
     // NUEVOS CONTROLES
     private JSpinner spinSeed;
     private JSpinner spinDrones;
@@ -223,11 +223,22 @@ public class VentanaPrincipal extends JFrame {
         textAreaResultados.setEditable(false);
 
         JScrollPane scroll = new JScrollPane(textAreaResultados);
-        scroll.setBounds(555, 140, 555, 390);
+        scroll.setBounds(555, 140, 555, 260);
         scroll.setBorder(BorderFactory.createTitledBorder("Consola de Resultados"));
 
         contentPane.add(scroll);
+        // ===
+        // Recorrido Drones
+        //======
+        textAreaRutas = new JTextArea();
+        textAreaRutas.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        textAreaRutas.setEditable(false);
 
+        JScrollPane scrollRutas = new JScrollPane(textAreaRutas);
+        scrollRutas.setBounds(555, 430, 555, 120);
+        scrollRutas.setBorder(BorderFactory.createTitledBorder("Rutas de Drones"));
+
+        contentPane.add(scrollRutas);
         // ===============================
         // ESTADO
         // ===============================
@@ -251,7 +262,14 @@ public class VentanaPrincipal extends JFrame {
         panelGrafica.setBounds(20, 575, 1090, 170);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         contentPane.add(panelGrafica);
+        textPaneCromosoma = new JTextPane();
+        textPaneCromosoma.setEditable(false);
 
+        JScrollPane scrollCrom = new JScrollPane(textPaneCromosoma);
+        scrollCrom.setBounds(20, 530, 520, 60);
+        scrollCrom.setBorder(BorderFactory.createTitledBorder("Cromosoma Solución"));
+
+        contentPane.add(scrollCrom);
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
 
@@ -322,7 +340,9 @@ public class VentanaPrincipal extends JFrame {
                         );
 
                 IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
-
+                SwingUtilities.invokeLater(() ->
+                mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
+        );
                 mostrarRutasRealesMTSP(
                         agMTSP,
                         mtsp,
@@ -369,7 +389,10 @@ public class VentanaPrincipal extends JFrame {
                         );
 
                 IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
-
+                
+                SwingUtilities.invokeLater(() ->
+                mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
+        );
                 mostrarRutasRealesMTSP(
                         agMTSP,
                         mtsp,
@@ -379,6 +402,7 @@ public class VentanaPrincipal extends JFrame {
 
                 SwingUtilities.invokeLater(() ->
                         mostrarResultadosReal(mejor, datos.rango, datos.apertura));
+                
             }
 
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
@@ -451,7 +475,9 @@ public class VentanaPrincipal extends JFrame {
         List<List<Point>> rutasVisual = new ArrayList<>();
 
         List<List<Integer>> rutas = agMTSP.decodificar(mejor);
-
+        SwingUtilities.invokeLater(() ->
+        mostrarRutasTexto(rutas, puntosControl)
+);
         Set<String> posicionesCamaras = new HashSet<>();
         for (Camara c : puntosControl)
             posicionesCamaras.add(c.x + "," + c.y);
@@ -503,6 +529,68 @@ public class VentanaPrincipal extends JFrame {
     //    AlgoritmoGeneticoMTSP tmpMTSP = new AlgoritmoGeneticoMTSP(null, camaras, numDrones, 0, this);
     //    return tmpMTSP.decodificar(camaras); // Devuelve IndividuoMTSP válido
    // }
+    private void mostrarRutasTexto(List<List<Integer>> rutas, List<Camara> puntosControl) {
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("===== RUTAS DRONES =====\n");
+
+        for (int i = 0; i < rutas.size(); i++) {
+
+            sb.append("Dron ").append(i + 1).append(": Base");
+
+            for (Integer idCam : rutas.get(i)) {
+
+                Camara c = puntosControl.get(idCam);
+
+                sb.append(" -> (")
+                  .append(c.x)
+                  .append(",")
+                  .append(c.y)
+                  .append(")");
+            }
+
+            sb.append(" -> Base\n");
+        }
+
+        sb.append("========================\n");
+
+        textAreaRutas.setText(sb.toString());
+    }
+    private void mostrarCromosomaColoreado(IndividuoMTSP ind, int numDrones, int numCamaras) {
+
+        StyledDocument doc = textPaneCromosoma.getStyledDocument();
+
+        try {
+            doc.remove(0, doc.getLength());
+        } catch (Exception ignored) {}
+
+        Color[] colores = {
+                Color.BLUE,
+                Color.MAGENTA,
+                Color.GREEN,
+                Color.ORANGE,
+                Color.CYAN
+        };
+
+        int dronActual = 0;
+
+        for (int g : ind.cromosoma) {
+
+            if (g >= numCamaras) {
+
+                dronActual++;
+                continue;
+            }
+
+            Style style = textPaneCromosoma.addStyle("color", null);
+            StyleConstants.setForeground(style, colores[dronActual]);
+
+            try {
+                doc.insertString(doc.getLength(), g + " ", style);
+            } catch (Exception ignored) {}
+        }
+    }
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         EventQueue.invokeLater(() -> {

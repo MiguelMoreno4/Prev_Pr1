@@ -16,9 +16,9 @@ public class CamaraReal {
         return new CamaraReal(x, y, theta);
     }
     public int getX() {
-    	return (int) Math.round(x);
+    	return (int) x;
     }
     public int getY() {
-    	return (int) Math.round(y);
+    	return (int) y;
     }
 }
