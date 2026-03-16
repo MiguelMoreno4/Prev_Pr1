@@ -29,14 +29,11 @@ public class Mapa {
         return 1;
     }
     public int getCoste(int x, int y) {
-        int valor = matrizImportancia[y][x];
-
-        if (valor == 0) return -1;  // muro
-        if (valor == 1) return 1;   // suelo blanco
-        if (valor == 5) return 5;   // amarillo
-        if (valor == 20) return 20; // rojo
-
-        return 1;
+        if (esObstaculo(x, y)) return -1; // muro
+        int valor = matrizImportancia[y][x]; 
+        if (valor == 5)  return 5; // suelo amarillo
+        if (valor == 20) return 20; // suelo rojo
+        return 1; // suelo blanco
     }
 
 	public int getImportancia(int xOrigen, int yOrigen) {
@@ -48,4 +45,19 @@ public class Mapa {
 		// TODO Auto-generated method stub
 		 return nx >= 0 && nx < columnas && ny >= 0 && ny < filas;
 	}
+	
+	public int getBasePrimeraX() {
+	    for (int y = 0; y < filas; y++)
+	        for (int x = 0; x < columnas; x++)
+	            if (!esObstaculo(x, y)) return x;
+	    return 1;
+	}
+
+	public int getBasePrimeraY() {
+	    for (int y = 0; y < filas; y++)
+	        for (int x = 0; x < columnas; x++)
+	            if (!esObstaculo(x, y)) return y;
+	    return 1;
+	}
+	
 }

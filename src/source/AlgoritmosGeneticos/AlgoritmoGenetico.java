@@ -19,7 +19,6 @@ public class AlgoritmoGenetico {
     private int bitsY;
     private int longitudCromosoma;
 
-    // Nuevo: Método de selección y cruce configurable
     public enum MetodoSeleccion { TORNEO, RULETA, ESTOCASTICO, TRUNCAMIENTO, RESTOS }
     public enum MetodoCruce { MONOPUNTO, UNIFORME }
 
@@ -44,7 +43,7 @@ public class AlgoritmoGenetico {
         this.modoPonderado = ponderado;
     }
 
-    public Individuo ejecutar(int generaciones, double probMutacion, double probCruce) {
+    public Individuo ejecutar(int generaciones, double probMutacion, double probCruce, double pElite) {
 
         ArrayList<Individuo> poblacion = new ArrayList<>();
         for (int i = 0; i < 30; i++) {
@@ -54,16 +53,17 @@ public class AlgoritmoGenetico {
         }
 
         Individuo mejorGlobal = poblacion.stream()
+                .filter(ind -> ind.fitness > 0)
                 .max(Comparator.comparingDouble(ind -> ind.fitness))
-                .get()
+                .orElse(poblacion.get(0))
                 .copiar();
 
         for (int g = 0; g < generaciones; g++) {
 
-            // 🔴 Mejor de esta generación
-            Individuo mejorGen = poblacion.stream()
-                    .max(Comparator.comparingDouble(ind -> ind.fitness))
-                    .get();
+            // 🔴 Mejor de esta generación (ignorando inválidos)
+        	Individuo mejorGen = poblacion.stream()
+        	        .max(Comparator.comparingDouble(ind -> ind.fitness))
+        	        .get();
 
             if (mejorGen.fitness > mejorGlobal.fitness) {
                 mejorGlobal = mejorGen.copiar();
@@ -71,20 +71,31 @@ public class AlgoritmoGenetico {
 
             if (ventana != null) {
                 double mediaGen = poblacion.stream()
+                        .filter(ind -> ind.fitness > 0)
                         .mapToDouble(ind -> ind.fitness)
                         .average()
-                        .orElse(0.0);
+                        .orElse(mejorGlobal.fitness);
 
                 ventana.actualizarMapaEnTiempoReal(mejorGen, g);
                 ventana.actualizarGrafica(
-                        mejorGen.fitness,      // 🔴 puede subir o bajar
-                        mejorGlobal.fitness,   // 🔵 nunca baja
-                        mediaGen               // 🟢 media
+                        mejorGen.fitness,
+                        mejorGlobal.fitness,
+                        mediaGen
                 );
             }
 
-            // 🔥 CREAR NUEVA GENERACIÓN SIN ELITISMO
+            // 🔥 CREAR NUEVA GENERACIÓN
             ArrayList<Individuo> nueva = new ArrayList<>();
+
+            // ELITISMO OPCIONAL
+            if (pElite > 0) {
+                int nElite = (int) Math.ceil(poblacion.size() * pElite);
+                poblacion.stream()
+                    .filter(ind -> ind.fitness > 0)
+                    .sorted(Comparator.comparingDouble((Individuo ind) -> ind.fitness).reversed())
+                    .limit(nElite)
+                    .forEach(ind -> nueva.add(ind.copiar()));
+            }
 
             while (nueva.size() < poblacion.size()) {
 
@@ -111,6 +122,7 @@ public class AlgoritmoGenetico {
         mejorGlobal.camaras = decodificar(mejorGlobal);
         return mejorGlobal;
     }
+
     private Individuo crearAleatorio() {
         Individuo ind = new Individuo(longitudCromosoma);
         for (int i = 0; i < longitudCromosoma; i++)
@@ -118,7 +130,6 @@ public class AlgoritmoGenetico {
         return ind;
     }
 
-    /** Selección según el método configurado */
     private Individuo seleccionar(List<Individuo> poblacion) {
         switch (metodoSeleccion) {
             case TORNEO: return torneo(poblacion);
@@ -130,7 +141,6 @@ public class AlgoritmoGenetico {
         }
     }
 
-    /** Métodos de selección */
     private Individuo torneo(List<Individuo> poblacion) {
         Individuo a = poblacion.get(rnd.nextInt(poblacion.size()));
         Individuo b = poblacion.get(rnd.nextInt(poblacion.size()));
@@ -161,7 +171,7 @@ public class AlgoritmoGenetico {
     }
 
     private Individuo truncamiento(List<Individuo> poblacion) {
-        int n = poblacion.size() / 2; // truncar la mitad peor
+        int n = poblacion.size() / 2;
         return poblacion.get(rnd.nextInt(n));
     }
 
@@ -175,7 +185,6 @@ public class AlgoritmoGenetico {
         return lista.get(rnd.nextInt(lista.size()));
     }
 
-    /** Cruces */
     private Individuo cruceMonopunto(Individuo a, Individuo b) {
         Individuo hijo = new Individuo(longitudCromosoma);
         int punto = rnd.nextInt(longitudCromosoma);
@@ -220,9 +229,8 @@ public class AlgoritmoGenetico {
     private double calcularFitness(Individuo ind) {
         List<Camara> cams = decodificar(ind);
 
-        // Penalización si no hay el número exacto de cámaras
         if (cams.size() != numCamaras)
-            return 0; // Para la media, no usar -100
+            return 0;
 
         HashSet<String> vigiladas = new HashSet<>();
         HashSet<String> posicionesCamaras = new HashSet<>();
@@ -231,14 +239,12 @@ public class AlgoritmoGenetico {
         }
 
         for (Camara c : cams) {
-            // Penalización si cámara sobre obstáculo o fuera del mapa
             if (c.x < 0 || c.x >= mapa.columnas || c.y < 0 || c.y >= mapa.filas || mapa.esObstaculo(c.x, c.y)) {
-                return 0; // Penalización para media
+                return 0;
             }
 
             vigiladas.add(c.x + "," + c.y);
 
-            // Direcciones ortogonales
             int[][] dirs = {{0,1},{0,-1},{1,0},{-1,0}};
             for (int[] d : dirs) {
                 for (int i = 1; i <= rango; i++) {
@@ -259,6 +265,7 @@ public class AlgoritmoGenetico {
 
         return vigiladas.size();
     }
+
     private Individuo convertirADirecto(Individuo bin) {
         Individuo ind = new Individuo();
         ind.camaras = decodificar(bin);

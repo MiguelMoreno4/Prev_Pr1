@@ -17,10 +17,14 @@ public class PanelMapaReal extends JPanel {
     private List<List<Point>> rutasDrones = new ArrayList<>();
     public PanelMapaReal() {
         setBackground(Color.WHITE);
-        // Sugerencia: añadir un borde para ver los límites del panel si es necesario
-        // setBorder(BorderFactory.createLineBorder(Color.GRAY));
     }
 
+    public void limpiar() {
+        this.camaras = null;
+        this.rutasDrones = new ArrayList<>();
+        repaint();
+    }
+    
     public void setMapa(int[][] mapa, int[][] importancia) {
         this.mapa = mapa;
         this.importancia = importancia;

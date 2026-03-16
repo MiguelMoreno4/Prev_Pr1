@@ -44,7 +44,10 @@ public class PanelGrafica extends JPanel {
 
         // Calculamos el máximo para escalar, pero con un pequeño margen extra (10%) 
         // para que la línea no toque el borde superior
-        double max = mejorGlobal.stream().max(Double::compare).orElse(1.0) * 1.1;
+        double max = Math.max(
+        	    mejorGlobal.stream().max(Double::compare).orElse(1.0),
+        	    media.stream().max(Double::compare).orElse(1.0)
+        	) * 1.1;
         if (max == 0) max = 1.0;
 
         // --- DIBUJAR ESCALA NUMÉRICA Y EJES ---

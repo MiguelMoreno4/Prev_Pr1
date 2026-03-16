@@ -1,6 +1,9 @@
 package source.AlgoritmosGeneticos;
 
 import java.util.*;
+
+import javax.swing.SwingUtilities;
+
 import java.awt.Color;
 
 import source.Camaras.Camara;
@@ -32,8 +35,7 @@ public class AlgoritmoGeneticoMTSP {
         this.ventana = ventana;
         this.rnd = new Random(semilla);
         this.aStar = new AStar(mapa);
-        this.flota = FabricaDrones.crearFlota(numDrones);
-    }
+        this.flota = FabricaDrones.crearFlota(numDrones, mapa.getBasePrimeraX(), mapa.getBasePrimeraY());    }
 
     public List<Dron> getFlota() {
         return this.flota;
@@ -143,36 +145,116 @@ public class AlgoritmoGeneticoMTSP {
             tiempoTotal += costeVuelta / dron.getVelocidad();
 
             maxT = Math.max(maxT, tiempoTotal);
-            minT = Math.min(minT, tiempoTotal);
+            if (!ruta.isEmpty())
+                minT = Math.min(minT, tiempoTotal);
         }
 
-        double penalizacion = (maxT - minT) * 0.5;
-
+        double penalizacion = (minT == Double.MAX_VALUE) ? 0 : (maxT - minT) * 0.5;
+        
         return maxT + penalizacion;
     }
 
-    /**
-     * Método simple de prueba para ejecutar MTSP con rutas de AG
-     */
-    public IndividuoMTSP ejecutarSimulacion() {
 
-        IndividuoMTSP mejor = null;
-        double mejorFitness = Double.MAX_VALUE;
+    public IndividuoMTSP ejecutar(int tamPoblacion, int generaciones,
+            double pCruce, double pMut, double pElite,
+            String metodoSeleccion, String metodoCruce, String metodoMutacion) {
 
-        // probar varios individuos aleatorios
-        for(int i=0;i<200;i++){
+		// 1. Crear población inicial
+		List<IndividuoMTSP> poblacion = new ArrayList<>();
+		for (int i = 0; i < tamPoblacion; i++) {
+			IndividuoMTSP ind = crearIndividuoAleatorio();
+			ind.fitness = calcularFitness(ind);
+			poblacion.add(ind);
+		}
+		
+		// 2. Mejor global inicial
+		IndividuoMTSP mejorGlobal = poblacion.stream()
+		        .filter(i -> i.fitness > 0 && i.fitness < Double.MAX_VALUE)
+		        .min(Comparator.comparingDouble(i -> i.fitness))
+		        .orElse(poblacion.get(0)).copiar();
+		
+		for (int g = 0; g < generaciones; g++) {
+		
+			// Mejor de esta generación (menor fitness es mejor en MTSP)
+			IndividuoMTSP mejorGen = poblacion.stream()
+			        .filter(i -> i.fitness > 0 && i.fitness < Double.MAX_VALUE)
+			        .min(Comparator.comparingDouble(i -> i.fitness))
+			        .orElse(mejorGlobal);
+			
+			if (mejorGen.fitness < mejorGlobal.fitness)
+				mejorGlobal = mejorGen.copiar();
+			
+			// Actualizar gráfica y etiquetas
+			if (ventana != null) {
+				double mediaGen = poblacion.stream()
+				        .filter(i -> i.fitness > 0 && i.fitness < Double.MAX_VALUE)
+				        .mapToDouble(i -> i.fitness)
+				        .average()
+				        .orElse(mejorGlobal.fitness);
+			
+				final double fitnessMejorGen = mejorGen.fitness;
+				final double fitnessMejor = mejorGlobal.fitness;
+				final double mediaFinal = mediaGen;
+				final int genFinal = g;
 
-            IndividuoMTSP ind = crearIndividuoAleatorio();
-            ind.fitness = calcularFitness(ind);
+				System.out.println("Gen=" + genFinal + " rojo=" + fitnessMejorGen + " azul=" + fitnessMejor + " verde=" + mediaFinal);
+				
+				SwingUtilities.invokeLater(() -> {
+				    ventana.actualizarGrafica(fitnessMejorGen, fitnessMejor, mediaFinal);
+				    ventana.actualizarMapaMTSPEnTiempoReal(genFinal, fitnessMejor);
+				});
+			}
+			
+			// Nueva generación
+			List<IndividuoMTSP> nueva = new ArrayList<>();
+			
+			// Elitismo
+			if (pElite > 0) {
+			    nueva.addAll(aplicarElitismo(poblacion, pElite));
+			}
+			// Generar el resto
+			while (nueva.size() < tamPoblacion) {
+				IndividuoMTSP padre1 = seleccionar(poblacion, metodoSeleccion);
+				IndividuoMTSP hijo;
+			
+				if (rnd.nextDouble() < pCruce) {
+					IndividuoMTSP padre2 = seleccionar(poblacion, metodoSeleccion);
+					IndividuoMTSP[] hijos = cruzar(padre1, padre2, metodoCruce);
+					hijo = hijos[0];
+					if (nueva.size() < tamPoblacion - 1)
+						nueva.add(hijos[1]);
+				} else {
+					hijo = padre1.copiar();
+				}
+				
+				if (rnd.nextDouble() < pMut)
+					mutar(hijo, metodoMutacion);
+			
+				hijo.fitness = calcularFitness(hijo);
+				nueva.add(hijo);
+			}
+			
+				poblacion = nueva;
+		}
+		
+			imprimirRutasDrones(mejorGlobal);
+			return mejorGlobal;
+	}
 
-            if(ind.fitness < mejorFitness){
-                mejorFitness = ind.fitness;
-                mejor = ind;
-            }
+    private IndividuoMTSP[] cruzar(IndividuoMTSP p1, IndividuoMTSP p2, String metodo) {
+        switch (metodo.toUpperCase()) {
+            case "PMX":      return crucePMX(p1, p2);
+            case "OX":       return cruceOX(p1, p2);
+            case "OXPP":     return cruceOXPP(p1, p2);
+            case "CX":       return cruceCX(p1, p2);
+            case "ERX":      return cruceERX(p1, p2);
+            case "ORDINAL":  return cruceCO(p1, p2);
+            case "INVENTADO":return cruceGSC(p1, p2);
+            default:         return crucePMX(p1, p2);
         }
-        imprimirRutasDrones(mejor);
-        return mejor;
     }
+    
+    
     public IndividuoMTSP crearIndividuoAleatorio() {
 
         int C = puntosControl.size();
@@ -386,7 +468,6 @@ public class AlgoritmoGeneticoMTSP {
      * Recombinación de Rutas (ERX) para dos padres
      */
     public IndividuoMTSP[] cruceERX(IndividuoMTSP padre1, IndividuoMTSP padre2) {
-        int size = padre1.cromosoma.size();
         
         // Construir mapas de vecinos para ambos padres
         Map<Integer, Set<Integer>> mapaAristas1 = construirMapaVecinos(padre1);
@@ -784,4 +865,23 @@ Esto preserva parcialmente la estructura de rutas de cada padre y evita drones v
         }
         return elitistas;
     }
+    
+    public List<Camara> generarCamarasAleatorias(int numCamaras) {
+        List<Camara> camaras = new ArrayList<>();
+        int intentos = 0;
+        while (camaras.size() < numCamaras && intentos < 10000) {
+            int x = rnd.nextInt(mapa.columnas);
+            int y = rnd.nextInt(mapa.filas);
+            if (!mapa.esObstaculo(x, y)) {
+                camaras.add(new Camara(x, y));
+            }
+            intentos++;
+        }
+        return camaras;
+    }
+    
+    public void setPuntosControl(List<Camara> camaras) {
+        this.puntosControl = camaras;
+    }
+    
 }

@@ -32,13 +32,11 @@ public class VentanaPrincipal extends JFrame {
     private JCheckBox chckbxPonderado;
     private JComboBox<String> comboEscenario;
 
-    private JRadioButton rdbtnNormal, rdbtnReal;
+    private JRadioButton rdbtnNormal, rdbtnReal, rdbtnMTSP;
 
     private JTextArea textAreaResultados;
     private JTextArea textAreaRutas;
     private PanelGrafica panelGrafica;
-
-    private JLabel lblGenActual, lblMejorFitness;
 
     private JSpinner spinPob, spinGens, spinCruce, spinMut, spinElite;
 
@@ -56,7 +54,7 @@ public class VentanaPrincipal extends JFrame {
 
         setTitle("Optimización de Cámaras - Panel de Control AG");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(50, 50, 1150, 800);
+        setBounds(50, 50, 1150, 950);
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
@@ -86,10 +84,12 @@ public class VentanaPrincipal extends JFrame {
 
         rdbtnNormal = new JRadioButton("Binario", true);
         rdbtnReal = new JRadioButton("Real");
+        rdbtnMTSP = new JRadioButton("MTSP");
 
         ButtonGroup grupoModo = new ButtonGroup();
         grupoModo.add(rdbtnNormal);
         grupoModo.add(rdbtnReal);
+        grupoModo.add(rdbtnMTSP);
 
         chckbxPonderado = new JCheckBox("Ponderado");
 
@@ -105,6 +105,7 @@ public class VentanaPrincipal extends JFrame {
         pnlConfig.add(new JLabel("Tipo:"));
         pnlConfig.add(rdbtnNormal);
         pnlConfig.add(rdbtnReal);
+        pnlConfig.add(rdbtnMTSP);
 
         pnlConfig.add(chckbxPonderado);
 
@@ -239,37 +240,28 @@ public class VentanaPrincipal extends JFrame {
         scrollRutas.setBorder(BorderFactory.createTitledBorder("Rutas de Drones"));
 
         contentPane.add(scrollRutas);
-        // ===============================
-        // ESTADO
-        // ===============================
 
-        lblGenActual = new JLabel("Generación: 0");
-        lblGenActual.setFont(new Font("Tahoma", Font.BOLD, 14));
-        lblGenActual.setBounds(30, 540, 200, 25);
-        contentPane.add(lblGenActual);
+        // ===============================
+        // CROMOSOMA SOLUCION
+        // ===============================
+        textPaneCromosoma = new JTextPane();
+        textPaneCromosoma.setEditable(false);
 
-        lblMejorFitness = new JLabel("Mejor Fitness: 0.00");
-        lblMejorFitness.setFont(new Font("Tahoma", Font.BOLD, 14));
-        lblMejorFitness.setForeground(new Color(41, 128, 185));
-        lblMejorFitness.setBounds(250, 540, 400, 25);
-        contentPane.add(lblMejorFitness);
+        JScrollPane scrollCrom = new JScrollPane(textPaneCromosoma);
+        scrollCrom.setBounds(20, 530, 520, 40);
+        scrollCrom.setBorder(BorderFactory.createTitledBorder("Cromosoma Solución"));
+
+        contentPane.add(scrollCrom);
 
         // ===============================
         // GRAFICA
         // ===============================
 
         panelGrafica = new PanelGrafica();
-        panelGrafica.setBounds(20, 575, 1090, 170);
+        panelGrafica.setBounds(20, 580, 1090, 320);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         contentPane.add(panelGrafica);
-        textPaneCromosoma = new JTextPane();
-        textPaneCromosoma.setEditable(false);
 
-        JScrollPane scrollCrom = new JScrollPane(textPaneCromosoma);
-        scrollCrom.setBounds(20, 530, 520, 60);
-        scrollCrom.setBorder(BorderFactory.createTitledBorder("Cromosoma Solución"));
-
-        contentPane.add(scrollCrom);
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
 
@@ -312,52 +304,49 @@ public class VentanaPrincipal extends JFrame {
 
             boolean ponderado = chckbxPonderado.isSelected();
 
+            String seleccion = (String) comboSeleccion.getSelectedItem();
+            String cruce = (String) comboCruceOp.getSelectedItem();
+            String mutacion = (String) comboMutacionOp.getSelectedItem();
+
             // -------------------------
-            // AG BINARIO
+            // AG MTSP DIRECTO
             // -------------------------
+            if (rdbtnMTSP.isSelected()) {
+                SwingUtilities.invokeLater(() -> panelMapa.limpiar());
 
-            if (!rdbtnReal.isSelected()) {
-
-                AlgoritmoGenetico ag =
-                        new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
-
-                ag.setModoPonderado(ponderado);
-
-                Individuo mejor = ag.ejecutar(tGen, pMut, pCruce);
-
-                List<Camara> camarasFinales = new ArrayList<>();
-
-                for (Camara c : mejor.camaras)
-                    camarasFinales.add(new Camara(c.x, c.y));
-
-                AlgoritmoGeneticoMTSP agMTSP =
-                        new AlgoritmoGeneticoMTSP(
-                                mapaActual,
-                                camarasFinales,
-                                numDrones,
-                                seed,
-                                this
-                        );
-
-                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
-                SwingUtilities.invokeLater(() ->
-                mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
-        );
-                mostrarRutasRealesMTSP(
-                        agMTSP,
-                        mtsp,
-                        camarasFinales,
-                        mapaActual
+                // Crear AG con lista vacía para usar su rnd con la semilla
+                AlgoritmoGeneticoMTSP agMTSP = new AlgoritmoGeneticoMTSP(
+                    mapaActual, new ArrayList<>(), numDrones, seed, this
                 );
 
-                SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
+                // Generacion de camaras aleatorias con la semilla fijada
+                List<Camara> camarasGeneradas = agMTSP.generarCamarasAleatorias(datos.numCamaras);
+                System.out.println("Cámaras generadas: " + camarasGeneradas.size() + " de " + datos.numCamaras);
+                agMTSP.setPuntosControl(camarasGeneradas);
+
+                IndividuoMTSP mtsp = agMTSP.ejecutar(
+                    tPob, tGen, pCruce, pMut, pElite,
+                    seleccion, cruce, mutacion
+                );
+
+                if (mtsp == null) {
+                    SwingUtilities.invokeLater(() ->
+                        textAreaResultados.append("ERROR: A* no encontró rutas válidas.\n")
+                    );
+                    SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+                    return;
+                }
+
+                SwingUtilities.invokeLater(() ->
+                    mostrarCromosomaColoreado(mtsp, numDrones, camarasGeneradas.size())
+                );
+                mostrarRutasRealesMTSP(agMTSP, mtsp, camarasGeneradas, mapaActual);
             }
 
             // -------------------------
             // AG REAL
             // -------------------------
-
-            else {
+            else if (rdbtnReal.isSelected()) {
 
                 AlgoritmoGeneticoReal agReal =
                         new AlgoritmoGeneticoReal(
@@ -388,21 +377,77 @@ public class VentanaPrincipal extends JFrame {
                                 this
                         );
 
-                IndividuoMTSP mtsp = agMTSP.ejecutarSimulacion();
-                
-                SwingUtilities.invokeLater(() ->
-                mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
-        );
-                mostrarRutasRealesMTSP(
-                        agMTSP,
-                        mtsp,
-                        camarasFinales,
-                        mapaActual
+                IndividuoMTSP mtsp = agMTSP.ejecutar(
+                    tPob, tGen, pCruce, pMut, pElite,
+                    seleccion, cruce, mutacion
                 );
+
+                // guard null antes de usar mtsp
+                if (mtsp == null) {
+                    SwingUtilities.invokeLater(() ->
+                        textAreaResultados.append("ERROR: A* no encontró rutas válidas. Revisa las posiciones de base de los drones.\n")
+                    );
+                    SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+                    return;
+                }
+
+                SwingUtilities.invokeLater(() ->
+                    mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
+                );
+
+                mostrarRutasRealesMTSP(agMTSP, mtsp, camarasFinales, mapaActual);
 
                 SwingUtilities.invokeLater(() ->
                         mostrarResultadosReal(mejor, datos.rango, datos.apertura));
-                
+            }
+
+            // -------------------------
+            // AG BINARIO
+            // -------------------------
+            else {
+
+                AlgoritmoGenetico ag =
+                        new AlgoritmoGenetico(mapaActual, datos.rango, datos.numCamaras, this);
+
+                ag.setModoPonderado(ponderado);
+
+                Individuo mejor = ag.ejecutar(tGen, pMut, pCruce, pElite);
+
+                List<Camara> camarasFinales = new ArrayList<>();
+
+                for (Camara c : mejor.camaras)
+                    camarasFinales.add(new Camara(c.x, c.y));
+
+                AlgoritmoGeneticoMTSP agMTSP =
+                        new AlgoritmoGeneticoMTSP(
+                                mapaActual,
+                                camarasFinales,
+                                numDrones,
+                                seed,
+                                this
+                        );
+
+                IndividuoMTSP mtsp = agMTSP.ejecutar(
+                    tPob, tGen, pCruce, pMut, pElite,
+                    seleccion, cruce, mutacion
+                );
+
+                // guard null antes de usar mtsp
+                if (mtsp == null) {
+                    SwingUtilities.invokeLater(() ->
+                        textAreaResultados.append("ERROR: A* no encontró rutas válidas. Revisa las posiciones de base de los drones.\n")
+                    );
+                    SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
+                    return;
+                }
+
+                SwingUtilities.invokeLater(() ->
+                    mostrarCromosomaColoreado(mtsp, numDrones, camarasFinales.size())
+                );
+
+                mostrarRutasRealesMTSP(agMTSP, mtsp, camarasFinales, mapaActual);
+
+                SwingUtilities.invokeLater(() -> mostrarResultados(mejor));
             }
 
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
@@ -414,8 +459,6 @@ public class VentanaPrincipal extends JFrame {
         SwingUtilities.invokeLater(() -> {
             panelMapa.setCamaras(cams, r, a);
             panelMapa.repaint();
-            lblGenActual.setText("Generación: " + g);
-            lblMejorFitness.setText("Mejor Fitness: " + String.format("%.2f", f));
         });
     }
 
@@ -425,9 +468,11 @@ public class VentanaPrincipal extends JFrame {
             for (Camara c : ind.camaras) visual.add(new CamaraReal(c.x, c.y, 0));
             panelMapa.setCamaras(visual, 1, 0); 
             panelMapa.repaint();
-            lblGenActual.setText("Generación: " + gen);
-            lblMejorFitness.setText("Mejor Fitness: " + String.format("%.2f", ind.fitness));
         });
+    }
+
+    public void actualizarMapaMTSPEnTiempoReal(int gen, double fitness) {
+        // Solo para referencia, las etiquetas fueron eliminadas
     }
 
     public void actualizarGrafica(double mGen, double mAbs, double med) {
@@ -464,11 +509,15 @@ public class VentanaPrincipal extends JFrame {
         panelMapa.setCamaras(lista, 1, 0);
         panelMapa.repaint();
     }
+
     private void mostrarRutasRealesMTSP(
             AlgoritmoGeneticoMTSP agMTSP,
             IndividuoMTSP mejor,
             List<Camara> puntosControl,
             Mapa mapaActual) {
+
+        // guard null
+        if (mejor == null) return;
 
         AStar aStar = new AStar(mapaActual);
 
@@ -476,8 +525,9 @@ public class VentanaPrincipal extends JFrame {
 
         List<List<Integer>> rutas = agMTSP.decodificar(mejor);
         SwingUtilities.invokeLater(() ->
-        mostrarRutasTexto(rutas, puntosControl)
-);
+            mostrarRutasTexto(rutas, puntosControl)
+        );
+
         Set<String> posicionesCamaras = new HashSet<>();
         for (Camara c : puntosControl)
             posicionesCamaras.add(c.x + "," + c.y);
@@ -522,13 +572,19 @@ public class VentanaPrincipal extends JFrame {
             rutasVisual.add(caminoCompleto);
         }
 
+        // Mostrar cámaras como puntos en el mapa
+        List<CamaraReal> camarasVisual = new ArrayList<>();
+        for (Camara c : puntosControl)
+            camarasVisual.add(new CamaraReal(c.x, c.y, 0));
+
+        SwingUtilities.invokeLater(() -> {
+            panelMapa.setCamaras(camarasVisual, 0, 0); // rango=0, apertura=0 → solo puntos
+        });
+
         panelMapa.setRutasDrones(rutasVisual);
         panelMapa.repaint();
     }
-   // private IndividuoMTSP convertirAMTSP(List<Camara> camaras, int numDrones) {
-    //    AlgoritmoGeneticoMTSP tmpMTSP = new AlgoritmoGeneticoMTSP(null, camaras, numDrones, 0, this);
-    //    return tmpMTSP.decodificar(camaras); // Devuelve IndividuoMTSP válido
-   // }
+
     private void mostrarRutasTexto(List<List<Integer>> rutas, List<Camara> puntosControl) {
 
         StringBuilder sb = new StringBuilder();
@@ -557,7 +613,11 @@ public class VentanaPrincipal extends JFrame {
 
         textAreaRutas.setText(sb.toString());
     }
+
     private void mostrarCromosomaColoreado(IndividuoMTSP ind, int numDrones, int numCamaras) {
+
+        // guard null
+        if (ind == null) return;
 
         StyledDocument doc = textPaneCromosoma.getStyledDocument();
 
@@ -577,7 +637,7 @@ public class VentanaPrincipal extends JFrame {
 
         for (int g : ind.cromosoma) {
 
-            if (g >= numCamaras) {
+            if (g > numCamaras) {
 
                 dronActual++;
                 continue;
@@ -591,6 +651,7 @@ public class VentanaPrincipal extends JFrame {
             } catch (Exception ignored) {}
         }
     }
+
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         EventQueue.invokeLater(() -> {
