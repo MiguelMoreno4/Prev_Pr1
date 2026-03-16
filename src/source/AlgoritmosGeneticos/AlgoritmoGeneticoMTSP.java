@@ -100,8 +100,8 @@ public class AlgoritmoGeneticoMTSP {
 
         List<List<Integer>> rutas = decodificar(ind);
 
-        double maxT = 0;
-        double minT = Double.MAX_VALUE;
+        double maxT = Double.NEGATIVE_INFINITY;
+        double minT = Double.POSITIVE_INFINITY;
 
         Set<String> posicionesCamaras = new HashSet<>();
         for (Camara c : puntosControl)
@@ -117,6 +117,7 @@ public class AlgoritmoGeneticoMTSP {
             int xActual = dron.getBaseX();
             int yActual = dron.getBaseY();
 
+            // recorrer cámaras
             for (int idCam : ruta) {
 
                 Camara destino = puntosControl.get(idCam);
@@ -136,23 +137,29 @@ public class AlgoritmoGeneticoMTSP {
                 yActual = destino.y;
             }
 
+            // volver a base
             double costeVuelta = aStar.calcularCoste(
                     xActual, yActual,
                     dron.getBaseX(), dron.getBaseY(),
                     posicionesCamaras
             );
 
+            if (costeVuelta == Double.POSITIVE_INFINITY)
+                return Double.MAX_VALUE;
+
             tiempoTotal += costeVuelta / dron.getVelocidad();
 
+            // guardar Ti
             maxT = Math.max(maxT, tiempoTotal);
-            if (!ruta.isEmpty())
-                minT = Math.min(minT, tiempoTotal);
+            minT = Math.min(minT, tiempoTotal);
         }
 
-        double penalizacion = (minT == Double.MAX_VALUE) ? 0 : (maxT - minT) * 0.5;
-        
-        return maxT + penalizacion;
+        // fórmula EXACTA pedida
+        double penalizacion = (maxT - minT) * 0.5;
+
+        return (maxT + penalizacion);
     }
+   
 
 
     public IndividuoMTSP ejecutar(int tamPoblacion, int generaciones,
@@ -196,8 +203,18 @@ public class AlgoritmoGeneticoMTSP {
 				final double fitnessMejor = mejorGlobal.fitness;
 				final double mediaFinal = mediaGen;
 				final int genFinal = g;
+				
+				double[] tiempos = calcularTiemposDrones(mejorGlobal);
 
-				System.out.println("Gen=" + genFinal + " rojo=" + fitnessMejorGen + " azul=" + fitnessMejor + " verde=" + mediaFinal);
+					System.out.println(
+					    "Gen=" + genFinal +
+					    " T1=" + tiempos[0] +
+					    " T2=" + (tiempos.length>1?tiempos[1]:0) +
+					    " T3=" + (tiempos.length>2?tiempos[2]:0) +
+					    " Fitness=" + mejorGlobal.fitness +
+					    " Media=" + mediaFinal
+					);
+				//System.out.println("Gen=" + genFinal + " rojo=" + fitnessMejorGen + " azul=" + fitnessMejor + " verde=" + mediaFinal);
 				
 				SwingUtilities.invokeLater(() -> {
 				    ventana.actualizarGrafica(fitnessMejorGen, fitnessMejor, mediaFinal);
@@ -240,7 +257,54 @@ public class AlgoritmoGeneticoMTSP {
 			imprimirRutasDrones(mejorGlobal);
 			return mejorGlobal;
 	}
+    private double[] calcularTiemposDrones(IndividuoMTSP ind) {
 
+        List<List<Integer>> rutas = decodificar(ind);
+        double[] tiempos = new double[rutas.size()];
+
+        Set<String> posicionesCamaras = new HashSet<>();
+        for (Camara c : puntosControl)
+            posicionesCamaras.add(c.x + "," + c.y);
+
+        for (int d = 0; d < rutas.size(); d++) {
+
+            Dron dron = flota.get(d);
+            List<Integer> ruta = rutas.get(d);
+
+            double tiempoTotal = 0;
+
+            int xActual = dron.getBaseX();
+            int yActual = dron.getBaseY();
+
+            for (int idCam : ruta) {
+
+                Camara destino = puntosControl.get(idCam);
+
+                double coste = aStar.calcularCoste(
+                        xActual, yActual,
+                        destino.x, destino.y,
+                        posicionesCamaras
+                );
+
+                tiempoTotal += coste / dron.getVelocidad();
+
+                xActual = destino.x;
+                yActual = destino.y;
+            }
+
+            double costeVuelta = aStar.calcularCoste(
+                    xActual, yActual,
+                    dron.getBaseX(), dron.getBaseY(),
+                    posicionesCamaras
+            );
+
+            tiempoTotal += costeVuelta / dron.getVelocidad();
+
+            tiempos[d] = tiempoTotal;
+        }
+
+        return tiempos;
+    }
     private IndividuoMTSP[] cruzar(IndividuoMTSP p1, IndividuoMTSP p2, String metodo) {
         switch (metodo.toUpperCase()) {
             case "PMX":      return crucePMX(p1, p2);
