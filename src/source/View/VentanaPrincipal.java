@@ -1,15 +1,12 @@
 package source.View;
 
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
-import source.AlgoritmosGeneticos.AlgoritmoGenetico;
 import source.AlgoritmosGeneticos.AlgoritmoGeneticoMTSP;
-import source.AlgoritmosGeneticos.AlgoritmoGeneticoReal;
 import source.Camaras.Camara;
 import source.Camaras.CamaraReal;
 import source.Camaras.Dron;
@@ -17,7 +14,6 @@ import source.Escenarios.EscenarioDatos;
 import source.Escenarios.EscenariosFactory;
 import source.Individuos.Individuo;
 import source.Individuos.IndividuoMTSP;
-import source.Individuos.IndividuoReal;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -29,10 +25,10 @@ public class VentanaPrincipal extends JFrame {
     private JPanel contentPane;
     private PanelMapaReal panelMapa;
     private JButton btnEjecutar;
-    private JCheckBox chckbxPonderado;
+  
     private JComboBox<String> comboEscenario;
 
-    private JRadioButton rdbtnNormal, rdbtnReal, rdbtnMTSP;
+    private JRadioButton rdbtnMTSP;
 
     private JTextArea textAreaResultados;
     private JTextArea textAreaRutas;
@@ -49,6 +45,20 @@ public class VentanaPrincipal extends JFrame {
     // NUEVOS CONTROLES
     private JSpinner spinSeed;
     private JSpinner spinDrones;
+    
+    // PANEL DE RESULTADO FINAL MTSP
+    private JPanel panelResultadoFinal;
+    private JLabel lblMakespan;
+    private JLabel lblSemilla;
+    private JLabel lblTiemposDrones;
+    private JTextPane textPaneCromosomaFinal;
+    private JTextPane textPaneReporteFinal;
+
+    // ==========================================
+    // NUEVAS VARIABLES PARA TIEMPO REAL
+    // ==========================================
+    private JLabel lblTiempoCronometro;
+    private JLabel[] lblTiemposDronesRealTime; // Array para soportar hasta 5 drones
 
     public VentanaPrincipal() {
 
@@ -83,6 +93,7 @@ public class VentanaPrincipal extends JFrame {
         spinDrones.setPreferredSize(new Dimension(50, 22));
 
         rdbtnMTSP = new JRadioButton("MTSP");
+        rdbtnMTSP.setSelected(true); // Seleccionado por defecto para facilitar pruebas
 
         ButtonGroup grupoModo = new ButtonGroup();
         grupoModo.add(rdbtnMTSP);
@@ -99,8 +110,6 @@ public class VentanaPrincipal extends JFrame {
 
         pnlConfig.add(new JLabel("Tipo:"));
         pnlConfig.add(rdbtnMTSP);
-
-        //pnlConfig.add(chckbxPonderado);
 
         // ===============================
         // PARAMETROS AG
@@ -140,30 +149,15 @@ public class VentanaPrincipal extends JFrame {
         spinElite.setPreferredSize(dimSpin);
 
         comboSeleccion = new JComboBox<>(new String[]{
-                "Torneo",
-                "Ruleta",
-                "Estocástico",
-                "Restos",
-                "Ranking",
-                "Truncamiento"
+                "Torneo", "Ruleta", "Estocástico", "Restos", "Ranking", "Truncamiento"
         });
 
         comboCruceOp = new JComboBox<>(new String[]{
-                "PMX",
-                "OX",
-                "OXPP",
-                "CX",
-                "ERX",
-                "Ordinal",
-                "Inventado"
+                "PMX", "OX", "OXPP", "CX", "ERX", "Ordinal", "Inventado"
         });
 
         comboMutacionOp = new JComboBox<>(new String[]{
-                "Inserción",
-                "Intercambio",
-                "Inversión",
-                "Heurística",
-                "Propia"
+                "Inserción", "Intercambio", "Inversión", "Heurística", "Propia"
         });
 
         pnlParams.add(new JLabel("Pob:"));
@@ -215,7 +209,7 @@ public class VentanaPrincipal extends JFrame {
         textAreaResultados = new JTextArea();
         textAreaResultados.setFont(new Font("Monospaced", Font.PLAIN, 12));
         textAreaResultados.setEditable(false);
-               
+                
         // ===
         // Recorrido Drones
         //======
@@ -249,13 +243,52 @@ public class VentanaPrincipal extends JFrame {
         panelGrafica.setBounds(20, 580, 1090, 320);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         contentPane.add(panelGrafica);
+        
+     // ===============================
+        // PANEL RESULTADO FINAL MTSP
+        // ===============================
+        panelResultadoFinal = new JPanel();
+        panelResultadoFinal.setLayout(new GridLayout(1, 1)); // Fuerza al texto a ocupar todo el panel
+        panelResultadoFinal.setBounds(555, 130, 555, 120);
+        panelResultadoFinal.setBorder(BorderFactory.createTitledBorder("Resultado Final MTSP"));
+        
+        textPaneReporteFinal = new JTextPane();
+        textPaneReporteFinal.setEditable(false);
+        textPaneReporteFinal.setBackground(Color.WHITE); // Fondo blanco para verlo claro
 
+        JScrollPane scrollReporte = new JScrollPane(textPaneReporteFinal);
+        scrollReporte.setBorder(null);
+        
+        panelResultadoFinal.add(scrollReporte); // Añadimos el scroll al panel
+        contentPane.add(panelResultadoFinal);   // Añadimos el panel a la ventana
+
+        // ===============================
+        // LISTENERS
+        // =============================== // LISTENERS
+        // ===============================
+     // ===============================
+     // ZONA DERECHA: REPORTE FINAL EXACTO (COMO EN LA FOTO)
+     // ===============================
+     panelResultadoFinal = new JPanel(new BorderLayout());
+     panelResultadoFinal.setBounds(555, 130, 555, 120);
+     // Importante: Sin bordes para que quede como texto limpio
+     contentPane.add(panelResultadoFinal);
+
+     // Inicializamos la variable global (asegúrate de tener 'private JTextPane textPaneReporteFinal;' arriba en tu clase)
+     textPaneReporteFinal = new JTextPane();
+     textPaneReporteFinal.setEditable(false);
+     textPaneReporteFinal.setOpaque(false); // Fondo transparente
+     textPaneReporteFinal.setBorder(null);
+     panelResultadoFinal.add(textPaneReporteFinal, BorderLayout.CENTER);
+     contentPane.add(textPaneReporteFinal); 
+        // ===============================
+        // LISTENERS
+        // ===============================
         btnEjecutar.addActionListener(this::ejecutarAG);
         comboEscenario.addActionListener(e -> cargarEscenario(comboEscenario.getSelectedIndex()));
 
         cargarEscenario(0);
     }
-
     // =====================================
     // EJECUTAR ALGORITMO
     // =====================================
@@ -265,11 +298,9 @@ public class VentanaPrincipal extends JFrame {
         new Thread(() -> {
 
             SwingUtilities.invokeLater(() -> {
-
                 panelGrafica.limpiar();
                 btnEjecutar.setEnabled(false);
                 textAreaResultados.setText("Ejecutando algoritmo...\n");
-
             });
 
             int escIdx = comboEscenario.getSelectedIndex();
@@ -289,8 +320,6 @@ public class VentanaPrincipal extends JFrame {
             double pCruce = (int) spinCruce.getValue() / 100.0;
             double pMut = (int) spinMut.getValue() / 100.0;
             double pElite = (int) spinElite.getValue() / 100.0;
-
-           // boolean ponderado = chckbxPonderado.isSelected();
 
             String seleccion = (String) comboSeleccion.getSelectedItem();
             String cruce = (String) comboCruceOp.getSelectedItem();
@@ -329,10 +358,33 @@ public class VentanaPrincipal extends JFrame {
                     mostrarCromosomaColoreado(mtsp, numDrones, camarasGeneradas.size())
                 );
                 mostrarRutasRealesMTSP(agMTSP, mtsp, camarasGeneradas, mapaActual);
-            }
+            
 
+             // ==========================================
+                // --- NUEVO: LLAMADA AL PANEL RESULTADO ---
+                // ==========================================
+                
+                // 1. Decodificamos las rutas del mejor individuo
+                List<List<Integer>> rutasFinales = agMTSP.decodificar(mtsp);
+                
+                // 2. Calculamos los tiempos EXACTAMENTE igual que en tu método ejecutar()
+                double[] arrayTiempos = agMTSP.calcularTiemposDrones(mtsp);
+                List<Double> tiemposFinales = new ArrayList<>();
+                if (arrayTiempos != null) { 
+                    for (double t : arrayTiempos) {
+                        tiemposFinales.add(t);
+                    }
+                }
+
+                // 3. Enviamos los datos al panel visual (usamos invokeLater porque tocamos la interfaz)
+                SwingUtilities.invokeLater(() -> {
+                    // Usamos mtsp.fitness como makespan y pasamos la lista de tiempos calculada
+                    mostrarResultadoFinalMTSP(mtsp.fitness, seed, new ArrayList<>(), tiemposFinales, rutasFinales); 
+                });
+                
+                // ==========================================
             SwingUtilities.invokeLater(() -> btnEjecutar.setEnabled(true));
-
+            }
         }).start();
     }
 
@@ -352,9 +404,7 @@ public class VentanaPrincipal extends JFrame {
         });
     }
 
-    public void actualizarMapaMTSPEnTiempoReal(int gen, double fitness) {
-        // Solo para referencia, las etiquetas fueron eliminadas
-    }
+   
 
     public void actualizarGrafica(double mGen, double mAbs, double med) {
         SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(mGen, mAbs, med));
@@ -368,15 +418,12 @@ public class VentanaPrincipal extends JFrame {
         textAreaResultados.setText("Escenario: " + nombreEsc + "\n");
     }
 
-   
-
     private void mostrarRutasRealesMTSP(
             AlgoritmoGeneticoMTSP agMTSP,
             IndividuoMTSP mejor,
             List<Camara> puntosControl,
             Mapa mapaActual) {
 
-        // guard null
         if (mejor == null) return;
 
         AStar aStar = new AStar(mapaActual);
@@ -476,7 +523,6 @@ public class VentanaPrincipal extends JFrame {
 
     private void mostrarCromosomaColoreado(IndividuoMTSP ind, int numDrones, int numCamaras) {
 
-        // guard null
         if (ind == null) return;
 
         StyledDocument doc = textPaneCromosoma.getStyledDocument();
@@ -511,7 +557,57 @@ public class VentanaPrincipal extends JFrame {
             } catch (Exception ignored) {}
         }
     }
+    
+public void mostrarResultadoFinalMTSP(double makespan, long semilla, List<Double> velocidades, List<Double> tiemposPorDron, List<List<Integer>> rutas) {
+	  System.out.println("Llamando a pintar el panel... Makespan: " + makespan + ", Drones: " + tiemposPorDron.size());
 
+      long semillaReal = ((Number) spinSeed.getValue()).longValue();
+
+      StyledDocument doc = textPaneReporteFinal.getStyledDocument();
+      try { doc.remove(0, doc.getLength()); } catch (Exception ignored) {}
+
+      Style styleBase = textPaneReporteFinal.addStyle("Base", null);
+      StyleConstants.setFontFamily(styleBase, "SansSerif");
+      StyleConstants.setFontSize(styleBase, 14);
+      StyleConstants.setBold(styleBase, true);
+      StyleConstants.setForeground(styleBase, Color.BLACK);
+
+      Color[] textColors = {Color.BLUE, Color.MAGENTA, new Color(0, 153, 0), Color.ORANGE, Color.CYAN};
+
+      try {
+          doc.insertString(doc.getLength(), String.format("MAKESPAN: %.2f s\n", makespan).replace(".", ","), styleBase);
+          doc.insertString(doc.getLength(), "SEMILLA: " + semillaReal + "\n", styleBase);
+
+          doc.insertString(doc.getLength(), "TIEMPOS POR DRON: ", styleBase);
+          for (int i = 0; i < tiemposPorDron.size(); i++) {
+              Style styleColor = textPaneReporteFinal.addStyle("cT" + i, styleBase);
+              StyleConstants.setForeground(styleColor, textColors[i % textColors.length]);
+              doc.insertString(doc.getLength(), String.format("T%d=%.2f  ", (i + 1), tiemposPorDron.get(i)).replace(".", ","), styleColor);
+          }
+          doc.insertString(doc.getLength(), "\n", styleBase);
+
+          doc.insertString(doc.getLength(), "CROMOSOMA: [ ", styleBase);
+          for (int d = 0; d < rutas.size(); d++) {
+              List<Integer> ruta = rutas.get(d);
+              Style styleColor = textPaneReporteFinal.getStyle("cT" + d);
+
+              for (Integer gen : ruta) {
+                  doc.insertString(doc.getLength(), gen + " ", styleColor);
+              }
+              if (d < rutas.size() - 1) {
+                  doc.insertString(doc.getLength(), "|| ", styleBase);
+              }
+          }
+          doc.insertString(doc.getLength(), "]", styleBase);
+
+          // --- FORZAR A SWING A ACTUALIZAR LA PANTALLA ---
+          textPaneReporteFinal.revalidate();
+          //textPaneReporteFinal.repaint();
+
+      } catch (Exception e) {
+          e.printStackTrace(); // Si hay algún error oculto, lo veremos aquí
+      }
+  }
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         EventQueue.invokeLater(() -> {

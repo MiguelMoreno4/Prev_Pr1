@@ -165,7 +165,7 @@ public class AlgoritmoGeneticoMTSP {
     public IndividuoMTSP ejecutar(int tamPoblacion, int generaciones,
             double pCruce, double pMut, double pElite,
             String metodoSeleccion, String metodoCruce, String metodoMutacion) {
-
+    	//long tiempoInicio = System.currentTimeMillis();
 		// 1. Crear población inicial
 		List<IndividuoMTSP> poblacion = new ArrayList<>();
 		for (int i = 0; i < tamPoblacion; i++) {
@@ -214,11 +214,10 @@ public class AlgoritmoGeneticoMTSP {
 					    " Fitness=" + mejorGlobal.fitness +
 					    " Media=" + mediaFinal
 					);
-				//System.out.println("Gen=" + genFinal + " rojo=" + fitnessMejorGen + " azul=" + fitnessMejor + " verde=" + mediaFinal);
 				
 				SwingUtilities.invokeLater(() -> {
 				    ventana.actualizarGrafica(fitnessMejorGen, fitnessMejor, mediaFinal);
-				    ventana.actualizarMapaMTSPEnTiempoReal(genFinal, fitnessMejor);
+				   
 				});
 			}
 			
@@ -257,7 +256,7 @@ public class AlgoritmoGeneticoMTSP {
 			imprimirRutasDrones(mejorGlobal);
 			return mejorGlobal;
 	}
-    private double[] calcularTiemposDrones(IndividuoMTSP ind) {
+    public double[] calcularTiemposDrones(IndividuoMTSP ind) {
 
         List<List<Integer>> rutas = decodificar(ind);
         double[] tiempos = new double[rutas.size()];
