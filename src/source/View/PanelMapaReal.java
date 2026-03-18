@@ -78,6 +78,7 @@ public class PanelMapaReal extends JPanel {
                     int imp = importancia[y][x];
                     switch (imp) {
                         case 20: g2.setColor(new Color(150, 0, 0)); break;
+                        case 15: g2.setColor(Color.PINK); break;
                         case 10: g2.setColor(Color.RED); break;
                         case 5:  g2.setColor(Color.YELLOW); break;
                         default: g2.setColor(Color.WHITE);
@@ -177,27 +178,37 @@ public class PanelMapaReal extends JPanel {
         }
     }
 
-    private void dibujarCamarasNormal(Graphics2D g2, int cellSize, int filas, int columnas, int xOff, int yOff) {
-        g2.setColor(new Color(144, 238, 144, 150));
-        for (CamaraReal c : camaras) {
-            int xCentro = (int) Math.floor(c.x);
-            int yCentro = (int) Math.floor(c.y);
-            int[][] direcciones = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-            for (int[] dir : direcciones) {
-                for (int d = 1; d <= Math.max(filas, columnas); d++) {
-                    int nx = xCentro + (dir[0] * d);
-                    int ny = yCentro + (dir[1] * d);
-                    if (nx < 0 || nx >= columnas || ny < 0 || ny >= filas || mapa[ny][nx] == 1) break; 
-                    g2.fillRect(xOff + (nx * cellSize), yOff + (ny * cellSize), cellSize, cellSize);
-                }
-            }
-        }
-        for (CamaraReal c : camaras) {
-            int cx = (int) (xOff + (c.x * cellSize) + (cellSize / 2.0));
-            int cy = (int) (yOff + (c.y * cellSize) + (cellSize / 2.0));
-            int r = cellSize / 3;
-            g2.setColor(Color.BLUE);
-            g2.fillOval(cx - r, cy - r, r * 2, r * 2);
+private void dibujarCamarasNormal(Graphics2D g2, int cellSize, int filas, int columnas, int xOff, int yOff) {
+        
+        // Configuramos la letra para que se escale según el tamaño de la celda
+        g2.setFont(new Font("Arial", Font.BOLD, Math.max(10, cellSize / 2)));
+
+        // CAMBIO: Usamos un bucle clásico para tener el índice 'i'
+        for (int i = 0; i < camaras.size(); i++) {
+            CamaraReal c = camaras.get(i);
+            
+            int nx = (int) Math.floor(c.x);
+            int ny = (int) Math.floor(c.y);
+
+            // Calculamos la posición exacta en píxeles en el panel
+            int pixelX = xOff + (nx * cellSize);
+            int pixelY = yOff + (ny * cellSize);
+
+            // 1. PINTAR LA CÁMARA (Ejemplo: Un círculo azul)
+            g2.setColor(Color.BLUE); 
+            g2.fillOval(pixelX, pixelY, cellSize, cellSize);
+
+            // 2. PINTAR EL NÚMERO DEL CROMOSOMA ENCIMA
+            g2.setColor(Color.WHITE); // Texto blanco para que destaque sobre el azul
+            
+            // Centramos el texto a ojo (puedes ajustar estos sumandos si queda un poco descentrado)
+            int textX = pixelX + (cellSize / 4) + 2; 
+            int textY = pixelY + (cellSize / 2) + (cellSize / 4);
+            
+            // Dibujamos la 'i', que es exactamente el mismo número que leerá el cromosoma
+            g2.drawString(String.valueOf(i), textX, textY);
+            
+            
         }
     }
 }

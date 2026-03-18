@@ -23,7 +23,9 @@ public class AlgoritmoGeneticoMTSP {
     private AStar aStar;
     private VentanaPrincipal ventana;
     private Random rnd;
-
+ // Matriz de distancias. El índice 0 será la Base. Del 1 al C serán las cámaras.
+    private double[][] matrizCostes; 
+    
     public AlgoritmoGeneticoMTSP(Mapa mapa,
                                  List<Camara> puntosControl,
                                  int numDrones,
@@ -35,12 +37,48 @@ public class AlgoritmoGeneticoMTSP {
         this.ventana = ventana;
         this.rnd = new Random(semilla);
         this.aStar = new AStar(mapa);
-        this.flota = FabricaDrones.crearFlota(numDrones, mapa.getBasePrimeraX(), mapa.getBasePrimeraY());    }
-
+        this.flota = FabricaDrones.crearFlota(numDrones, mapa.getBasePrimeraX(), mapa.getBasePrimeraY());    
+        precalcularMatrizCostes();
+    }
+    
     public List<Dron> getFlota() {
         return this.flota;
     }
+    private void precalcularMatrizCostes() {
+        int C = puntosControl.size();
+        matrizCostes = new double[C + 1][C + 1];
 
+        Set<String> posicionesCamaras = new HashSet<>();
+        for (Camara c : puntosControl) {
+            posicionesCamaras.add(c.x + "," + c.y);
+        }
+
+        // Asumimos que todos los drones salen de la misma base
+        int baseX = flota.get(0).getBaseX();
+        int baseY = flota.get(0).getBaseY();
+
+        System.out.println("Calculando Matriz de Costes con A*... Por favor, espera.");
+
+        // Calcular costes desde la Base (índice 0) hacia las cámaras (índices 1 a C)
+        for (int i = 0; i < C; i++) {
+            Camara destino = puntosControl.get(i);
+            double coste = aStar.calcularCoste(baseX, baseY, destino.x, destino.y, posicionesCamaras);
+            matrizCostes[0][i + 1] = coste;
+            matrizCostes[i + 1][0] = coste; // Asumimos que la ida cuesta lo mismo que la vuelta
+        }
+
+        // Calcular costes entre todas las cámaras
+        for (int i = 0; i < C; i++) {
+            Camara origen = puntosControl.get(i);
+            for (int j = i + 1; j < C; j++) {
+                Camara destino = puntosControl.get(j);
+                double coste = aStar.calcularCoste(origen.x, origen.y, destino.x, destino.y, posicionesCamaras);
+                matrizCostes[i + 1][j + 1] = coste;
+                matrizCostes[j + 1][i + 1] = coste; // Coste bidireccional
+            }
+        }
+        System.out.println("¡Matriz de Costes calculada con éxito!");
+    }
     /**
      * Convierte una lista de cámaras en un IndividuoMTSP
      */

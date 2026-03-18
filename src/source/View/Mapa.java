@@ -32,6 +32,7 @@ public class Mapa {
         if (esObstaculo(x, y)) return -1; // muro
         int valor = matrizImportancia[y][x]; 
         if (valor == 5)  return 5; // suelo amarillo
+        if (valor ==15) return 15;
         if (valor == 20) return 20; // suelo rojo
         return 1; // suelo blanco
     }

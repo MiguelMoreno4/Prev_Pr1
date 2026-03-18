@@ -599,7 +599,7 @@ public void mostrarResultadoFinalMTSP(double makespan, long semilla, List<Double
               }
           }
           doc.insertString(doc.getLength(), "]", styleBase);
-
+       
           // --- FORZAR A SWING A ACTUALIZAR LA PANTALLA ---
           textPaneReporteFinal.revalidate();
           //textPaneReporteFinal.repaint();
