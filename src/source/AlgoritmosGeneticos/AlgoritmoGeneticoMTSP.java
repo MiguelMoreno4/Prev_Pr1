@@ -141,10 +141,6 @@ public class AlgoritmoGeneticoMTSP {
         double maxT = Double.NEGATIVE_INFINITY;
         double minT = Double.POSITIVE_INFINITY;
 
-        Set<String> posicionesCamaras = new HashSet<>();
-        for (Camara c : puntosControl)
-            posicionesCamaras.add(c.x + "," + c.y);
-
         for (int d = 0; d < rutas.size(); d++) {
 
             Dron dron = flota.get(d);
@@ -152,48 +148,34 @@ public class AlgoritmoGeneticoMTSP {
 
             double tiempoTotal = 0;
 
-            int xActual = dron.getBaseX();
-            int yActual = dron.getBaseY();
+            // índice 0 = base, índices 1..C = cámaras
+            int nodoActual = 0; // empezamos en la base
 
-            // recorrer cámaras
             for (int idCam : ruta) {
-
-                Camara destino = puntosControl.get(idCam);
-
-                double coste = aStar.calcularCoste(
-                        xActual, yActual,
-                        destino.x, destino.y,
-                        posicionesCamaras
-                );
+                int nodoDestino = idCam + 1; // idCam es 0-based, matriz es 1-based
+                double coste = matrizCostes[nodoActual][nodoDestino];
 
                 if (coste == Double.POSITIVE_INFINITY)
                     return Double.MAX_VALUE;
 
                 tiempoTotal += coste / dron.getVelocidad();
-
-                xActual = destino.x;
-                yActual = destino.y;
+                nodoActual = nodoDestino;
             }
 
-            // volver a base
-            double costeVuelta = aStar.calcularCoste(
-                    xActual, yActual,
-                    dron.getBaseX(), dron.getBaseY(),
-                    posicionesCamaras
-            );
-
+            // vuelta a base
+            double costeVuelta = matrizCostes[nodoActual][0];
             if (costeVuelta == Double.POSITIVE_INFINITY)
                 return Double.MAX_VALUE;
 
             tiempoTotal += costeVuelta / dron.getVelocidad();
 
-            // guardar Ti
             maxT = Math.max(maxT, tiempoTotal);
-            minT = Math.min(minT, tiempoTotal);
+            if (!ruta.isEmpty())
+                minT = Math.min(minT, tiempoTotal);
         }
 
         // fórmula EXACTA pedida
-        double penalizacion = (maxT - minT) * 0.5;
+        double penalizacion = (minT == Double.POSITIVE_INFINITY) ? 0 : (maxT - minT) * 0.5;
 
         return (maxT + penalizacion);
     }
@@ -294,54 +276,30 @@ public class AlgoritmoGeneticoMTSP {
 			imprimirRutasDrones(mejorGlobal);
 			return mejorGlobal;
 	}
+    
     public double[] calcularTiemposDrones(IndividuoMTSP ind) {
-
         List<List<Integer>> rutas = decodificar(ind);
         double[] tiempos = new double[rutas.size()];
 
-        Set<String> posicionesCamaras = new HashSet<>();
-        for (Camara c : puntosControl)
-            posicionesCamaras.add(c.x + "," + c.y);
-
         for (int d = 0; d < rutas.size(); d++) {
-
             Dron dron = flota.get(d);
             List<Integer> ruta = rutas.get(d);
-
             double tiempoTotal = 0;
-
-            int xActual = dron.getBaseX();
-            int yActual = dron.getBaseY();
+            int nodoActual = 0; // base
 
             for (int idCam : ruta) {
-
-                Camara destino = puntosControl.get(idCam);
-
-                double coste = aStar.calcularCoste(
-                        xActual, yActual,
-                        destino.x, destino.y,
-                        posicionesCamaras
-                );
-
-                tiempoTotal += coste / dron.getVelocidad();
-
-                xActual = destino.x;
-                yActual = destino.y;
+                int nodoDestino = idCam + 1;
+                tiempoTotal += matrizCostes[nodoActual][nodoDestino] / dron.getVelocidad();
+                nodoActual = nodoDestino;
             }
 
-            double costeVuelta = aStar.calcularCoste(
-                    xActual, yActual,
-                    dron.getBaseX(), dron.getBaseY(),
-                    posicionesCamaras
-            );
-
-            tiempoTotal += costeVuelta / dron.getVelocidad();
-
+            // vuelta a base
+            tiempoTotal += matrizCostes[nodoActual][0] / dron.getVelocidad();
             tiempos[d] = tiempoTotal;
         }
-
         return tiempos;
     }
+    
     private IndividuoMTSP[] cruzar(IndividuoMTSP p1, IndividuoMTSP p2, String metodo) {
         switch (metodo.toUpperCase()) {
             case "PMX":      return crucePMX(p1, p2);
@@ -967,6 +925,7 @@ Esto preserva parcialmente la estructura de rutas de cada padre y evita drones v
         return elitistas;
     }
     
+    /*
     public List<Camara> generarCamarasAleatorias(int numCamaras) {
         List<Camara> camaras = new ArrayList<>();
         int intentos = 0;
@@ -980,9 +939,28 @@ Esto preserva parcialmente la estructura de rutas de cada padre y evita drones v
         }
         return camaras;
     }
+     * */
+    
+    public List<Camara> generarCamarasAleatorias(int numCamaras) {
+        List<Camara> camaras = new ArrayList<>();
+        Set<String> posiciones = new HashSet<>(); // AÑADIR
+        int intentos = 0;
+        while (camaras.size() < numCamaras && intentos < 10000) {
+            int x = rnd.nextInt(mapa.columnas);
+            int y = rnd.nextInt(mapa.filas);
+            String pos = x + "," + y;
+            if (!mapa.esObstaculo(x, y) && !posiciones.contains(pos)) {
+                camaras.add(new Camara(x, y));
+                posiciones.add(pos);
+            }
+            intentos++;
+        }
+        return camaras;
+    }
     
     public void setPuntosControl(List<Camara> camaras) {
         this.puntosControl = camaras;
+        precalcularMatrizCostes(); // recalcular con las cámaras reales
     }
     
 }
