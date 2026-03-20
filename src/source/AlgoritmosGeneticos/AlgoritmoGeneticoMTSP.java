@@ -170,11 +170,10 @@ public class AlgoritmoGeneticoMTSP {
             tiempoTotal += costeVuelta / dron.getVelocidad();
 
             maxT = Math.max(maxT, tiempoTotal);
-            if (!ruta.isEmpty())
-                minT = Math.min(minT, tiempoTotal);
+            minT = Math.min(minT, tiempoTotal);
         }
 
-        // fórmula EXACTA pedida
+        // fórmula de penalización
         double penalizacion = (minT == Double.POSITIVE_INFINITY) ? 0 : (maxT - minT) * 0.5;
 
         return (maxT + penalizacion);
@@ -185,7 +184,7 @@ public class AlgoritmoGeneticoMTSP {
     public IndividuoMTSP ejecutar(int tamPoblacion, int generaciones,
             double pCruce, double pMut, double pElite,
             String metodoSeleccion, String metodoCruce, String metodoMutacion) {
-    	//long tiempoInicio = System.currentTimeMillis();
+
 		// 1. Crear población inicial
 		List<IndividuoMTSP> poblacion = new ArrayList<>();
 		for (int i = 0; i < tamPoblacion; i++) {
@@ -250,24 +249,38 @@ public class AlgoritmoGeneticoMTSP {
 			}
 			// Generar el resto
 			while (nueva.size() < tamPoblacion) {
-				IndividuoMTSP padre1 = seleccionar(poblacion, metodoSeleccion);
-				IndividuoMTSP hijo;
-			
-				if (rnd.nextDouble() < pCruce) {
-					IndividuoMTSP padre2 = seleccionar(poblacion, metodoSeleccion);
-					IndividuoMTSP[] hijos = cruzar(padre1, padre2, metodoCruce);
-					hijo = hijos[0];
-					if (nueva.size() < tamPoblacion - 1)
-						nueva.add(hijos[1]);
-				} else {
-					hijo = padre1.copiar();
-				}
-				
-				if (rnd.nextDouble() < pMut)
-					mutar(hijo, metodoMutacion);
-			
-				hijo.fitness = calcularFitness(hijo);
-				nueva.add(hijo);
+			    IndividuoMTSP padre1 = seleccionar(poblacion, metodoSeleccion);
+			    IndividuoMTSP hijo1;
+
+			    if (rnd.nextDouble() < pCruce) {
+			        IndividuoMTSP padre2 = seleccionar(poblacion, metodoSeleccion);
+			        IndividuoMTSP[] hijos = cruzar(padre1, padre2, metodoCruce);
+			        hijo1 = hijos[0];
+			        
+			       //procesamos al 2º hijo
+			        if (nueva.size() < tamPoblacion - 1) {
+			            IndividuoMTSP hijo2 = hijos[1];
+			            
+			            // Mutamos al hijo 2 si toca
+			            if (rnd.nextDouble() < pMut) {
+			                mutar(hijo2, metodoMutacion);
+			            }
+			            // Calcular el fitness antes de añadirlo
+			            hijo2.fitness = calcularFitness(hijo2); 
+			            nueva.add(hijo2);
+			        }
+			      
+			    } else {
+			        hijo1 = padre1.copiar();
+			    }
+			    
+			    // Procesamos el primer hijo (o el clon del padre1)
+			    if (rnd.nextDouble() < pMut) {
+			        mutar(hijo1, metodoMutacion);
+			    }
+			    
+			    hijo1.fitness = calcularFitness(hijo1);
+			    nueva.add(hijo1);
 			}
 			
 				poblacion = nueva;
