@@ -1,64 +1,88 @@
 package source.View;
 
+import java.util.Random;
+
 public class Mapa {
-    public int filas;
-    public int columnas;
-    public int[][] obstaculos;
-    public int[][] matrizImportancia;
+    // El enunciado exige estrictamente 15x15
+    public static final int FILAS = 15;
+    public static final int COLUMNAS = 15;
 
-    public Mapa(int filas, int columnas, int[][] obstaculos) {
-        this.filas = filas;
-        this.columnas = columnas;
-        this.obstaculos = obstaculos;
-        this.matrizImportancia = new int[filas][columnas];
+    // Sustituimos las matrices de números por un enumerado claro
+    public enum TipoCasilla {
+        SUELO,    // Gris oscuro (Libre)
+        MURO,     // Rojo oscuro (Obstáculo)
+        ARENA,    // Naranja (Penaliza)
+        MUESTRA   // Amarillo (Objetivo principal)
     }
 
-    public boolean esObstaculo(int x, int y) {
-        return obstaculos[y][x] == 1;
+    public TipoCasilla[][] casillas;
+
+    // Ya no hay "Escenarios", solo le pasamos una semilla (ej: 3000)
+    public Mapa(long semilla) {
+        casillas = new TipoCasilla[COLUMNAS][FILAS];
+        generarMapa(semilla);
     }
 
-    public void setMatrizImportancia(int[][] imp) {
-        this.matrizImportancia = imp;
-    }
+    private void generarMapa(long semilla) {
+        // La clave de la práctica: Random con semilla
+        Random rnd = new Random(semilla); 
 
-    public int getValorImportancia(int x, int y) {
-        if (matrizImportancia == null) return 1; // Si no hay matriz, valor base
-        if (y >= 0 && y < matrizImportancia.length && x >= 0 && x < matrizImportancia[0].length) {
-            return matrizImportancia[y][x];
+        // 1. Rellenar todo de SUELO inicialmente
+        for (int x = 0; x < COLUMNAS; x++) {
+            for (int y = 0; y < FILAS; y++) {
+                casillas[x][y] = TipoCasilla.SUELO;
+            }
         }
-        return 1;
+
+        // 2. Poner Muros infranqueables en los bordes exteriores
+        for (int i = 0; i < COLUMNAS; i++) {
+            casillas[i][0] = TipoCasilla.MURO;
+            casillas[i][FILAS - 1] = TipoCasilla.MURO;
+            casillas[0][i] = TipoCasilla.MURO;
+            casillas[COLUMNAS - 1][i] = TipoCasilla.MURO;
+        }
+
+        // 3. Despejar la salida: El Rover SIEMPRE sale de (1,1) según el PDF
+        casillas[1][1] = TipoCasilla.SUELO;
+
+        // 4. Colocar obstáculos al azar (si usamos la semilla 3000, siempre caerán en el mismo sitio)
+        colocarElementos(rnd, TipoCasilla.MURO, 15);     // 15 muros internos
+        colocarElementos(rnd, TipoCasilla.ARENA, 20);    // 20 bancos de arena
+        colocarElementos(rnd, TipoCasilla.MUESTRA, 10);  // 10 muestras científicas
     }
-    public int getCoste(int x, int y) {
-        if (esObstaculo(x, y)) return -1; // muro
-        int valor = matrizImportancia[y][x]; 
-        if (valor == 5)  return 5; // suelo amarillo
-        if (valor ==15) return 15;
-        if (valor == 20) return 20; // suelo rojo
-        return 1; // suelo blanco
+
+    private void colocarElementos(Random rnd, TipoCasilla tipo, int cantidad) {
+        int colocados = 0;
+        while (colocados < cantidad) {
+            int x = rnd.nextInt(COLUMNAS);
+            int y = rnd.nextInt(FILAS);
+            
+            // Solo lo colocamos si es suelo y no tapamos la salida (1,1)
+            if (casillas[x][y] == TipoCasilla.SUELO && !(x == 1 && y == 1)) {
+                casillas[x][y] = tipo;
+                colocados++;
+            }
+        }
     }
 
-	public int getImportancia(int xOrigen, int yOrigen) {
-		// TODO Auto-generated method stub
-		return this.matrizImportancia[xOrigen][yOrigen];
-	}
+    // --- MÉTODOS ÚTILES PARA EL ROVER ---
 
-	public boolean enRango(int nx, int ny) {
-		// TODO Auto-generated method stub
-		 return nx >= 0 && nx < columnas && ny >= 0 && ny < filas;
-	}
-	
-	public int getBasePrimeraX() {
-	    for (int y = 0; y < filas; y++)
-	        for (int x = 0; x < columnas; x++)
-	            if (!esObstaculo(x, y)) return x;
-	    return 1;
-	}
+    public boolean enRango(int x, int y) {
+        return x >= 0 && x < COLUMNAS && y >= 0 && y < FILAS;
+    }
 
-	public int getBasePrimeraY() {
-	    for (int y = 0; y < filas; y++)
-	        for (int x = 0; x < columnas; x++)
-	            if (!esObstaculo(x, y)) return y;
-	    return 1;
-	}
-	
+    // El sensor del Rover usará esto para "mirar" qué hay delante
+    public TipoCasilla getCasilla(int x, int y) {
+        if (!enRango(x, y)) return TipoCasilla.MURO;
+        return casillas[x][y];
+    }
+
+    // Cuando el Rover pase por encima de una muestra, llamaremos a esto
+    public void recogerMuestra(int x, int y) {
+        if (enRango(x, y) && casillas[x][y] == TipoCasilla.MUESTRA) {
+            casillas[x][y] = TipoCasilla.SUELO; // La muestra desaparece
+        }
+    }
+    public int getFilas() {return FILAS;}
+    public int getCol() {return this.COLUMNAS;}
 }
