@@ -12,12 +12,27 @@ public class NodoAccion implements Nodo {
 
     @Override
     public boolean ejecutar(Rover rover, Mapa mapa) {
+        // 1. Ejecutamos la acción física. 
+        // ¡Tu clase Rover ya gestiona internamente la batería y el mareo aquí!
         switch (accion) {
-            case AVANZAR: rover.avanzar(mapa); break;
-            case GIRAR_IZQ: rover.girarIzq(); break;
-            case GIRAR_DER: rover.girarDer(); break;
+            case AVANZAR: 
+                rover.avanzar(mapa); 
+                break;
+            case GIRAR_IZQ: 
+                rover.girarIzq(); 
+                break;
+            case GIRAR_DER: 
+                rover.girarDer(); 
+                break;
         }
-        return true; // Se ejecutó una acción física, fin del tick
+
+        // 2. Control de seguridad por si el Rover se queda en negativo
+        if (rover.bateria < 0) {
+            rover.bateria = 0;
+        }
+
+        // 3. Devolvemos TRUE para bloquear más acciones físicas en este tick
+        return true; 
     }
 
     @Override

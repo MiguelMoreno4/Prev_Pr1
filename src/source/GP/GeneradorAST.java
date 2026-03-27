@@ -4,51 +4,59 @@ import source.AST.*;
 import java.util.Random;
 
 public class GeneradorAST {
-    private static final Random rnd = new Random();
+    
+    public static final Random rnd = new Random();
 
-    // Método Ramped half-and-half
-    public static NodoBloque generarIndividuo(int profundidadMax, boolean usarFull) {
-        NodoBloque raiz = new NodoBloque();
-        // Un individuo en la raíz suele tener entre 1 y 3 instrucciones base
-        int numInstrucciones = 1 + rnd.nextInt(3);
-        for (int i = 0; i < numInstrucciones; i++) {
-            raiz.instrucciones.add(generarNodo(0, profundidadMax, usarFull));
-        }
-        return raiz;
-    }
-
-    private static Nodo generarNodo(int profundidadActual, int profundidadMax, boolean usarFull) {
-        // Si llegamos al límite de profundidad, o si es "Grow" y toca terminal al azar
-        if (profundidadActual >= profundidadMax || (!usarFull && rnd.nextDouble() < 0.5)) {
+    // Función principal que refleja tu pseudocódigo
+    public static Nodo crearArbolAleatorio(int profundidadActual, int profundidadMax) {
+        
+        // CASO BASE: Si llegamos al límite, forzamos que sea una acción (Terminal)
+        if (profundidadActual >= profundidadMax) {
             return generarTerminal();
-        } else {
-            // Generar un Nodo IF
+        }
+
+        // CASO RECURSIVO: Elegimos aleatoriamente el tipo de nodo (0=Condicional, 1=Bloque, 2=Acción)
+        int tipoNodo = rnd.nextInt(3);
+
+        if (tipoNodo == 0) {
+            // === ES UN NODO CONDICIONAL ===
             TipoSensor sensor = TipoSensor.values()[rnd.nextInt(TipoSensor.values().length)];
             Operador op = Operador.values()[rnd.nextInt(Operador.values().length)];
-            int umbral = 10 + rnd.nextInt(90); // Umbral entre 10 y 100
+            int umbral = 10 + rnd.nextInt(90); // Aleatorio entre 10 y 100
 
-            NodoCondicional nodoIf = new NodoCondicional(sensor, op, umbral);
-            
-            // Llenar la rama IF
-            nodoIf.ramaIf.instrucciones.add(generarNodo(profundidadActual + 1, profundidadMax, usarFull));
-            
-            // 50% de probabilidad de tener un bloque ELSE
-            if (rnd.nextBoolean()) {
-                nodoIf.ramaElse.instrucciones.add(generarNodo(profundidadActual + 1, profundidadMax, usarFull));
+            // Generamos las dos ramas de forma recursiva aumentando la profundidad
+            Nodo ramaIf = crearArbolAleatorio(profundidadActual + 1, profundidadMax);
+            Nodo ramaElse = crearArbolAleatorio(profundidadActual + 1, profundidadMax);
+
+            return new NodoCondicional(sensor, op, umbral, ramaIf, ramaElse);
+
+        } else if (tipoNodo == 1) {
+            // === ES UN NODO BLOQUE ===
+            NodoBloque nodoBloque = new NodoBloque();
+            int numHijos = 2 + rnd.nextInt(2); // Aleatorio entre 2 y 3 hijos
+
+            for (int i = 0; i < numHijos; i++) {
+                nodoBloque.agregarHijo(crearArbolAleatorio(profundidadActual + 1, profundidadMax));
             }
-            return nodoIf;
+            
+            return nodoBloque;
+
+        } else {
+            // === ES UN NODO ACCIÓN (HOJA PREMATURA) ===
+            // Esto es lo que permite que el árbol no sea siempre 100% simétrico (Método Grow)
+            return generarTerminal();
         }
     }
 
-    // Regla del PDF: AVANZAR tiene el doble de probabilidad
-    public static NodoAccion generarTerminal() {
+    // Método auxiliar para generar los nodos finales respetando tus reglas originales
+    public static Nodo generarTerminal() {
         int r = rnd.nextInt(4); // 0, 1, 2, 3
         if (r < 2) {
-            return new NodoAccion(TipoAccion.AVANZAR); // 50% (Doble probabilidad)
+            return new NodoAccion(TipoAccion.AVANZAR); // 50% de probabilidad
         } else if (r == 2) {
-            return new NodoAccion(TipoAccion.GIRAR_IZQ); // 25%
+            return new NodoAccion(TipoAccion.GIRAR_IZQ); // 25% de probabilidad
         } else {
-            return new NodoAccion(TipoAccion.GIRAR_DER); // 25%
+            return new NodoAccion(TipoAccion.GIRAR_DER); // 25% de probabilidad
         }
     }
 }

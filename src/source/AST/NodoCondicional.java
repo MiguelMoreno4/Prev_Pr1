@@ -3,41 +3,43 @@ package source.AST;
 import source.View.Mapa;
 import source.View.Rover;
 
-public class NodoCondicional implements Nodo {
+public class NodoCondicional implements Nodo { 
     public TipoSensor sensor;
     public Operador operador;
     public int umbral;
     
-    public NodoBloque ramaIf;
-    public NodoBloque ramaElse; // Puede ser null
+    // Ahora las ramas son de tipo Nodo
+    public Nodo ramaIf;
+    public Nodo ramaElse; 
 
-    public NodoCondicional(TipoSensor sensor, Operador operador, int umbral) {
+    public NodoCondicional(TipoSensor sensor, Operador operador, int umbral, Nodo ramaIf, Nodo ramaElse) {
         this.sensor = sensor;
         this.operador = operador;
         this.umbral = umbral;
-        this.ramaIf = new NodoBloque();
-        this.ramaElse = new NodoBloque();
+        this.ramaIf = ramaIf;
+        this.ramaElse = ramaElse;
     }
 
     @Override
-    public boolean ejecutar(Rover rover, Mapa mapa) {
+    public boolean ejecutar(Rover rover, Mapa mapa) { 
         int valorSensor = escanearSensor(rover, mapa);
         
         if (operador.evaluar(valorSensor, umbral)) {
-            return ramaIf.ejecutar(rover, mapa);
-        } else if (ramaElse != null && !ramaElse.instrucciones.isEmpty()) {
-            return ramaElse.ejecutar(rover, mapa);
+            if (ramaIf != null) {
+                return ramaIf.ejecutar(rover, mapa); 
+            }
+        } else {
+            if (ramaElse != null) {
+                return ramaElse.ejecutar(rover, mapa); 
+            }
         }
-        return false;
+        return false; 
     }
 
-    // --- LÓGICA DE LOS SENSORES SEGÚN EL PDF ---
+    // --- LÓGICA DE LOS SENSORES INTACTA ---
     private int escanearSensor(Rover rover, Mapa mapa) {
-        if (sensor == TipoSensor.NIVEL_ENERGIA) {
-            return rover.bateria;
-        }
+        if (sensor == TipoSensor.NIVEL_ENERGIA) return rover.bateria;
 
-        // Para los espaciales, escaneamos en línea recta
         int dist = 1;
         int cx = rover.x + rover.orientacion.dx;
         int cy = rover.y + rover.orientacion.dy;
@@ -47,7 +49,7 @@ public class NodoCondicional implements Nodo {
             
             if (tipo == Mapa.TipoCasilla.MURO) {
                 if (sensor == TipoSensor.DIST_OBSTACULO) return dist;
-                return 100; // La vista se bloquea, devuelve 100 para Muestra/Arena
+                return 100; 
             }
             if (sensor == TipoSensor.DIST_MUESTRA && tipo == Mapa.TipoCasilla.MUESTRA) return dist;
             if (sensor == TipoSensor.DIST_ARENA && tipo == Mapa.TipoCasilla.ARENA) return dist;
@@ -57,27 +59,26 @@ public class NodoCondicional implements Nodo {
             cy += rover.orientacion.dy;
         }
         
-        // Si salimos del mapa, cuenta como obstáculo
         if (sensor == TipoSensor.DIST_OBSTACULO) return dist;
         return 100;
     }
 
     @Override
-    public Nodo clonar() {
-        NodoCondicional copia = new NodoCondicional(sensor, operador, umbral);
-        copia.ramaIf = (NodoBloque) this.ramaIf.clonar();
-        if (this.ramaElse != null) copia.ramaElse = (NodoBloque) this.ramaElse.clonar();
-        return copia;
+    public Nodo clonar() { 
+        Nodo copiaIf = (ramaIf != null) ? ramaIf.clonar() : null;
+        Nodo copiaElse = (ramaElse != null) ? ramaElse.clonar() : null;
+        
+        return new NodoCondicional(sensor, operador, umbral, copiaIf, copiaElse);
     }
 
     @Override
     public String imprimir(String tab) {
         StringBuilder sb = new StringBuilder();
         sb.append(tab).append("IF ( ").append(sensor).append(" ").append(operador).append(" ").append(umbral).append(" ) {\n");
-        sb.append(ramaIf.imprimir(tab + "  "));
+        if (ramaIf != null) sb.append(ramaIf.imprimir(tab + "  "));
         sb.append(tab).append("}\n");
         
-        if (ramaElse != null && !ramaElse.instrucciones.isEmpty()) {
+        if (ramaElse != null) {
             sb.append(tab).append("ELSE {\n");
             sb.append(ramaElse.imprimir(tab + "  "));
             sb.append(tab).append("}\n");
@@ -87,8 +88,8 @@ public class NodoCondicional implements Nodo {
 
     @Override
     public int contarNodos() {
-        int total = 1;
-        total += ramaIf.contarNodos();
+        int total = 1; 
+        if (ramaIf != null) total += ramaIf.contarNodos();
         if (ramaElse != null) total += ramaElse.contarNodos();
         return total;
     }

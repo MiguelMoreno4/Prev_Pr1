@@ -1,23 +1,28 @@
 package source.AST;
 
-import java.util.ArrayList;
-import java.util.List;
 import source.View.Mapa;
 import source.View.Rover;
+import java.util.ArrayList;
+import java.util.List;
 
 public class NodoBloque implements Nodo {
-    public List<Nodo> instrucciones;
+    
+    public List<Nodo> hijos;
 
     public NodoBloque() {
-        this.instrucciones = new ArrayList<>();
+        this.hijos = new ArrayList<>();
+    }
+
+    public void agregarHijo(Nodo hijo) {
+        this.hijos.add(hijo);
     }
 
     @Override
     public boolean ejecutar(Rover rover, Mapa mapa) {
-        for (Nodo hijo : instrucciones) {
-            // Si el hijo ejecuta una acción física, detenemos el bloque (1 acción por tick)
+        for (Nodo hijo : hijos) {
+            // Si un hijo ejecuta una acción física, detenemos el bloque (1 acción por tick)
             if (hijo.ejecutar(rover, mapa)) {
-                return true;
+                return true; 
             }
         }
         return false;
@@ -26,8 +31,8 @@ public class NodoBloque implements Nodo {
     @Override
     public Nodo clonar() {
         NodoBloque copia = new NodoBloque();
-        for (Nodo hijo : instrucciones) {
-            copia.instrucciones.add(hijo.clonar());
+        for (Nodo hijo : this.hijos) {
+            copia.agregarHijo(hijo.clonar());
         }
         return copia;
     }
@@ -35,7 +40,7 @@ public class NodoBloque implements Nodo {
     @Override
     public String imprimir(String tab) {
         StringBuilder sb = new StringBuilder();
-        for (Nodo hijo : instrucciones) {
+        for (Nodo hijo : hijos) {
             sb.append(hijo.imprimir(tab));
         }
         return sb.toString();
@@ -43,8 +48,8 @@ public class NodoBloque implements Nodo {
 
     @Override
     public int contarNodos() {
-        int total = 1; // Este bloque cuenta como 1 nodo
-        for (Nodo hijo : instrucciones) {
+        int total = 1; 
+        for (Nodo hijo : hijos) {
             total += hijo.contarNodos();
         }
         return total;
