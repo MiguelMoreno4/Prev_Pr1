@@ -32,11 +32,10 @@ public class NodoBloque implements Nodo {
     public Nodo clonar() {
         NodoBloque copia = new NodoBloque();
         for (Nodo hijo : this.hijos) {
-            copia.agregarHijo(hijo.clonar());
+            copia.hijos.add(hijo.clonar()); // Clona recursivamente cada hijo del bloque
         }
         return copia;
     }
-
     @Override
     public String imprimir(String tab) {
         StringBuilder sb = new StringBuilder();

@@ -22,12 +22,13 @@ public class AlgoritmoGenetico {
         // 2. Generar el resto de la población
         while (nuevaPoblacion.size() < tamano) {
             Nodo padre1 = seleccionTorneo(poblacionActual);
-            Nodo hijo = padre1.clonar();
+            Nodo hijo = padre1.clonar(); // Hacemos copia profunda del padre
 
             // Cruce
             if (rnd.nextDouble() < probCruce) {
                 Nodo padre2 = seleccionTorneo(poblacionActual);
-                crucePorSubArbol(hijo, padre2.clonar());
+                // Ahora actualizamos la raíz por si el cruce cambia el nodo principal
+                hijo = crucePorSubArbol(hijo, padre2); 
             }
 
             // Mutación
@@ -68,55 +69,90 @@ public class AlgoritmoGenetico {
         return mejor;
     }
 
-    // --- CRUCE (Intercambio de ramas anidadas) ---
-    private void crucePorSubArbol(Nodo hijo1, Nodo hijo2) {
-        List<NodoBloque> bloques1 = obtenerTodosLosBloques(hijo1);
-        List<NodoBloque> bloques2 = obtenerTodosLosBloques(hijo2);
+    // =========================================================
+    // CRUCE (Intercambio de sub-árboles avanzado)
+    // =========================================================
+    private Nodo crucePorSubArbol(Nodo hijo1, Nodo padre2) {
+        // Seleccionamos un punto de cruce al azar en ambos árboles
+        Nodo nodoCruce1 = seleccionarNodoAlAzar(hijo1);
+        Nodo nodoCruce2 = seleccionarNodoAlAzar(padre2);
 
-        if (bloques1.isEmpty() || bloques2.isEmpty()) return;
+        // Sustituimos el nodo en el hijo1 por una copia profunda de la rama del padre2
+        return sustituirNodo(hijo1, nodoCruce1, nodoCruce2.clonar());
+    }
 
-        NodoBloque b1 = bloques1.get(rnd.nextInt(bloques1.size()));
-        NodoBloque b2 = bloques2.get(rnd.nextInt(bloques2.size()));
+    private Nodo seleccionarNodoAlAzar(Nodo raiz) {
+        List<Nodo> todos = new ArrayList<>();
+        recolectarNodos(raiz, todos);
+        return todos.get(rnd.nextInt(todos.size()));
+    }
 
-        if (!b1.hijos.isEmpty() && !b2.hijos.isEmpty()) {
-            int idx1 = rnd.nextInt(b1.hijos.size());
-            int idx2 = rnd.nextInt(b2.hijos.size());
-            
-            // Intercambiamos los nodos
-            Nodo temp = b1.hijos.get(idx1);
-            b1.hijos.set(idx1, b2.hijos.get(idx2).clonar());
-            b2.hijos.set(idx2, temp.clonar());
+    private void recolectarNodos(Nodo actual, List<Nodo> lista) {
+        if (actual == null) return;
+        lista.add(actual);
+
+        if (actual instanceof NodoBloque) {
+            for (Nodo hijo : ((NodoBloque) actual).hijos) recolectarNodos(hijo, lista);
+        } else if (actual instanceof NodoCondicional) {
+            NodoCondicional nc = (NodoCondicional) actual;
+            recolectarNodos(nc.ramaIf, lista);
+            recolectarNodos(nc.ramaElse, lista);
         }
     }
 
-    // --- MUTACIONES ---
+    private Nodo sustituirNodo(Nodo raizActual, Nodo viejo, Nodo nuevo) {
+        if (raizActual == viejo) return nuevo;
+
+        if (raizActual instanceof NodoBloque) {
+            NodoBloque nb = (NodoBloque) raizActual;
+            for (int i = 0; i < nb.hijos.size(); i++) {
+                if (nb.hijos.get(i) == viejo) {
+                    nb.hijos.set(i, nuevo);
+                    return raizActual;
+                } else {
+                    sustituirNodo(nb.hijos.get(i), viejo, nuevo);
+                }
+            }
+        } else if (raizActual instanceof NodoCondicional) {
+            NodoCondicional nc = (NodoCondicional) raizActual;
+            
+            if (nc.ramaIf == viejo) nc.ramaIf = nuevo;
+            else if (nc.ramaIf != null) sustituirNodo(nc.ramaIf, viejo, nuevo);
+
+            if (nc.ramaElse == viejo) nc.ramaElse = nuevo;
+            else if (nc.ramaElse != null) sustituirNodo(nc.ramaElse, viejo, nuevo);
+        }
+        return raizActual;
+    }
+
+    // =========================================================
+    // MUTACIONES (Tus reglas originales)
+    // =========================================================
     private Nodo aplicarMutacion(Nodo hijo, TipoMutacion tipo) {
         if (tipo == TipoMutacion.ALEATORIA) {
-            tipo = TipoMutacion.values()[rnd.nextInt(4)]; // Elige entre las 4 primeras
+            tipo = TipoMutacion.values()[rnd.nextInt(4)]; 
         }
 
         switch (tipo) {
-            case HOIST: // Poda: Asciende una sub-rama interna para que sustituya a la raíz
+            case HOIST: 
                 List<NodoBloque> bloques = obtenerTodosLosBloques(hijo);
                 if (bloques.size() > 1) {
-                    // Coge un bloque interno al azar y lo convierte en el nuevo individuo completo
                     return bloques.get(1 + rnd.nextInt(bloques.size() - 1)).clonar();
                 }
                 break;
 
-            case SUB_ARBOL: // Reemplaza un nodo aleatorio por una rama nueva
+            case SUB_ARBOL: 
                 List<NodoBloque> blq = obtenerTodosLosBloques(hijo);
                 if (!blq.isEmpty()) {
                     NodoBloque b = blq.get(rnd.nextInt(blq.size()));
                     if (!b.hijos.isEmpty()) {
                         int idx = rnd.nextInt(b.hijos.size());
-                        // Usa la nueva clase GeneradorAST para crear una sub-rama de prof. máxima 3
                         b.hijos.set(idx, GeneradorAST.crearArbolAleatorio(0, 3));
                     }
                 }
                 break;
 
-            case FUNCIONAL: // Altera operador, sensor o valor numérico en un IF
+            case FUNCIONAL: 
                 List<NodoCondicional> condicionales = obtenerTodosLosIF(hijo);
                 if (!condicionales.isEmpty()) {
                     NodoCondicional c = condicionales.get(rnd.nextInt(condicionales.size()));
@@ -127,7 +163,7 @@ public class AlgoritmoGenetico {
                 }
                 break;
 
-            case TERMINAL: // Altera un terminal (Avanzar / Girar) sin modificar estructura
+            case TERMINAL: 
                 List<NodoAccion> terminales = obtenerTodasLasAcciones(hijo);
                 if (!terminales.isEmpty()) {
                     NodoAccion a = terminales.get(rnd.nextInt(terminales.size()));
@@ -138,7 +174,7 @@ public class AlgoritmoGenetico {
         return hijo;
     }
 
-    // --- MÉTODOS AUXILIARES DE BÚSQUEDA EN EL ÁRBOL (RECURSIVOS) ---
+    // --- MÉTODOS AUXILIARES ORIGINALES ---
     private List<NodoBloque> obtenerTodosLosBloques(Nodo n) {
         List<NodoBloque> lista = new ArrayList<>();
         if (n instanceof NodoBloque) {

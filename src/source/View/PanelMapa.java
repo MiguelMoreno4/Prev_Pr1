@@ -48,17 +48,20 @@ public class PanelMapa extends JPanel {
                 int py = yOffset + (y * cellSize);
 
                 switch (mapaActual.getCasilla(x, y)) {
-                    case MURO:
-                        g2.setColor(new Color(100, 100, 100)); // Gris oscuro
-                        break;
-                    case MUESTRA:
-                        g2.setColor(new Color(50, 200, 50)); // Verde fosforescente
-                        break;
-                    case ARENA:
-                    default:
-                        g2.setColor(new Color(230, 200, 150)); // Color Arena marciana
-                        break;
-                }
+                case MURO:
+                    g2.setColor(new Color(200, 50, 50)); // Rojo: pared/muro
+                    break;
+                case MUESTRA:
+                    g2.setColor(new Color(50, 200, 50)); // Verde: recompensa/muestra
+                    break;
+                case ARENA:
+                    g2.setColor(new Color(255, 140, 0)); // Naranja: arena
+                    break;
+                case SUELO:
+                default:
+                    g2.setColor(new Color(100, 100, 100)); // Gris oscuro: libre/suelo
+                    break;
+            }
 
                 g2.fillRect(px, py, cellSize, cellSize);
                 

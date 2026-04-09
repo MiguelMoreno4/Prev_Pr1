@@ -64,11 +64,13 @@ public class NodoCondicional implements Nodo {
     }
 
     @Override
-    public Nodo clonar() { 
-        Nodo copiaIf = (ramaIf != null) ? ramaIf.clonar() : null;
-        Nodo copiaElse = (ramaElse != null) ? ramaElse.clonar() : null;
-        
-        return new NodoCondicional(sensor, operador, umbral, copiaIf, copiaElse);
+    public Nodo clonar() {
+        // 1. Nueva instancia
+        NodoCondicional copia = new NodoCondicional(this.sensor, this.operador, this.umbral, null, null);
+        // 2. Copia profunda recursiva
+        if (this.ramaIf != null) copia.ramaIf = this.ramaIf.clonar();
+        if (this.ramaElse != null) copia.ramaElse = this.ramaElse.clonar();
+        return copia;
     }
 
     @Override
