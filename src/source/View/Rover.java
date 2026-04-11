@@ -80,7 +80,7 @@ public class Rover {
     private void registrarGiro() {
         girosConsecutivos++;
         // Castigo por bucle (Mareo): 4 giros sin avanzar = -20E
-        if (girosConsecutivos >= 4) {
+        if (girosConsecutivos > 4) {
             this.bateria -= 20;
             girosConsecutivos = 0; // Reseteamos para que no le reste 20 cada giro extra
         }
@@ -112,7 +112,29 @@ public class Rover {
 
         return fitness;
     }
-
+    public void escanearVision(Mapa mapa) {
+        int nx = this.x;
+        int ny = this.y;
+        
+        // Proyectamos la visión en la dirección actual
+        while (true) {
+            nx += orientacion.dx;
+            ny += orientacion.dy;
+            
+            Mapa.TipoCasilla casilla = mapa.getCasilla(nx, ny);
+            
+            // Si la visión choca con un muro, dejamos de mirar
+            if (casilla == Mapa.TipoCasilla.MURO) {
+                break;
+            }
+            
+            // Si vemos una muestra, sumamos la recompensa y dejamos de mirar
+            if (casilla == Mapa.TipoCasilla.MUESTRA) {
+                this.recompensaVisual++;
+                break;
+            }
+        }
+    }
 	public int getX() {
 		// TODO Auto-generated method stub
 		return x;

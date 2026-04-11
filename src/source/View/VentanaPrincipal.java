@@ -11,15 +11,22 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VentanaPrincipal extends JFrame {
 
     private JPanel contentPane;
-    private PanelMapa panelMapa; // Lo crearemos en el siguiente paso
+    private PanelMapa panelMapa; 
     private PanelGrafica panelGrafica;
     
     private JButton btnEjecutar;
-    private JSpinner spinPob, spinGens, spinCruce, spinMut, spinProfundidad, spinSeed;
+    // Añadimos spinBloating a la lista
+    private JSpinner spinPob, spinGens, spinCruce, spinMut, spinProfundidad, spinSeed, spinBloating;
     private JComboBox<String> comboMutacionOp;
     
     private JTextArea textAreaCodigo;
@@ -53,12 +60,12 @@ public class VentanaPrincipal extends JFrame {
         Dimension dimSpin = new Dimension(60, 22);
         
         spinSeed = new JSpinner(new SpinnerNumberModel(3000, 1, 9999999, 1));
-        spinSeed.setPreferredSize(new Dimension(80, 22)); // Un poco más ancho para números grandes
+        spinSeed.setPreferredSize(new Dimension(80, 22)); 
         
-        spinPob = new JSpinner(new SpinnerNumberModel(100, 10, 99999, 10));
+        spinPob = new JSpinner(new SpinnerNumberModel(300, 10, 99999, 10));
         spinPob.setPreferredSize(dimSpin);
 
-        spinGens = new JSpinner(new SpinnerNumberModel(50, 1, 99999, 10));
+        spinGens = new JSpinner(new SpinnerNumberModel(300, 1, 99999, 10));
         spinGens.setPreferredSize(dimSpin);
 
         spinCruce = new JSpinner(new SpinnerNumberModel(90, 0, 100, 5));
@@ -70,6 +77,11 @@ public class VentanaPrincipal extends JFrame {
         spinProfundidad = new JSpinner(new SpinnerNumberModel(3, 1, 10, 1));
         spinProfundidad.setPreferredSize(dimSpin);
 
+        // --- NUEVO SPINNER PARA BLOATING ---
+        // Valor inicial: 0.5, Mínimo: 0.0, Máximo: 10.0, Paso: 0.1
+        spinBloating = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
+        spinBloating.setPreferredSize(dimSpin);
+
         comboMutacionOp = new JComboBox<>(new String[]{
                 "Aleatoria (Las 4)", "Hoist (Poda)", "Sub-Árbol", "Funcional", "Terminal"
         });
@@ -80,6 +92,8 @@ public class VentanaPrincipal extends JFrame {
         pnlParams.add(new JLabel("Cruce %:")); pnlParams.add(spinCruce);
         pnlParams.add(new JLabel("Mutación %:")); pnlParams.add(spinMut);
         pnlParams.add(new JLabel("Profundidad Inicial:")); pnlParams.add(spinProfundidad);
+        // Añadimos el componente visual del Bloating
+        pnlParams.add(new JLabel("Bloating:")); pnlParams.add(spinBloating);
         pnlParams.add(new JLabel("Tipo Mutación:")); pnlParams.add(comboMutacionOp);
 
         btnEjecutar = new JButton("EJECUTAR");
@@ -156,6 +170,9 @@ public class VentanaPrincipal extends JFrame {
             double pMut = (int) spinMut.getValue() / 100.0;
             int profMax = (int) spinProfundidad.getValue();
             
+            // --- APLICAMOS EL VALOR DEL BLOATING AL EVALUADOR ---
+            Evaluador.COEF_BLOATING = ((Number) spinBloating.getValue()).doubleValue();
+            
             // Leer la semilla (Si luego la vas a usar en el evaluador o Generador)
             long semilla = ((Number) spinSeed.getValue()).longValue();
             GeneradorAST.rnd.setSeed(semilla); // <--- IMPORTANTE: Aplicar la semilla
@@ -166,56 +183,55 @@ public class VentanaPrincipal extends JFrame {
             AlgoritmoGenetico ag = new AlgoritmoGenetico();
             List<Nodo> poblacion = new ArrayList<>(); // <-- CAMBIO A NODO
 
-            // 2. Población Inicial
-            for (int i = 0; i < tPob; i++) {
-                // GeneradorAST.crearArbolAleatorio es nuestra versión limpia
-                poblacion.add(GeneradorAST.crearArbolAleatorio(0, profMax)); 
-            }
+         // 2. Población Inicial
+            poblacion = GeneradorAST.inicializarPoblacion(tPob, 2, profMax);
+
+            // 🌟 VARIABLES PARA EL MEJOR HISTÓRICO 
+            Nodo mejorNodoAbsoluto = poblacion.get(0);
+            double mejorFitnessAbsoluto = Double.NEGATIVE_INFINITY;
 
             // 3. Bucle Evolutivo
             for (int gen = 0; gen < tGen; gen++) {
                 poblacion = ag.evolucionar(poblacion, tipoMut, pCruce, pMut);
                 
                 // Calcular estadísticas para la gráfica
-                double mejorFit = Double.NEGATIVE_INFINITY; // Por si hay fitness negativos
+                double mejorFitGen = Double.NEGATIVE_INFINITY;
                 double sumaFit = 0;
-                Nodo mejorGen = poblacion.get(0);
 
                 for (Nodo ind : poblacion) {
                     double fit = Evaluador.evaluarIndividuo(ind);
                     sumaFit += fit;
-                    if (fit > mejorFit) {
-                        mejorFit = fit;
-                        mejorGen = ind;
+                    
+                    // Mejor de esta generación en concreto
+                    if (fit > mejorFitGen) {
+                        mejorFitGen = fit;
+                    }
+                    
+                    // 🌟 Mejor de TODA la ejecución (Lo guardamos al vuelo)
+                    if (fit > mejorFitnessAbsoluto) {
+                        mejorFitnessAbsoluto = fit;
+                        mejorNodoAbsoluto = ind.clonar(); // Clonamos por seguridad
                     }
                 }
                 
                 double mediaFit = sumaFit / tPob;
-                final int generacionActual = gen;
-                final double mF = mejorFit;
                 
-                SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(generacionActual, mF, mediaFit));
+                // Variables finales para pasarlas al hilo de Swing
+                final double mG = mejorFitGen;
+                final double mAbs = mejorFitnessAbsoluto;
+                final double mMed = mediaFit;
+                
+                // ¡Corregido! Pasamos las 3 notas (Gen, Absoluta, Media)
+                SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(mG, mAbs, mMed));
             }
 
-            // 4. Fin de la Evolución: Extraer al mejor global
-            Nodo mejorGlobal = poblacion.get(0);
-            double maxFitness = Evaluador.evaluarIndividuo(mejorGlobal);
-            
-            for (Nodo ind : poblacion) {
-                double fit = Evaluador.evaluarIndividuo(ind);
-                if (fit > maxFitness) {
-                    maxFitness = fit;
-                    mejorGlobal = ind;
-                }
-            }
-
-            final Nodo mejorFinal = mejorGlobal;
-            final double fitFinal = maxFitness;
+            // 4. Fin de la Evolución: ¡Ya tenemos al mejor global extraído!
+            final Nodo mejorFinal = mejorNodoAbsoluto;
+            final double fitFinal = mejorFitnessAbsoluto;
 
             // 5. Mostrar resultados en la UI
             SwingUtilities.invokeLater(() -> {
                 textAreaCodigo.setText(mejorFinal.imprimir(""));
-                // NOTA: Asumo que Evaluador tiene COEF_BLOATING público
                 textPaneReporteFinal.setText(String.format("Fitness Final: %.2f\nTamaño del Árbol (Nodos): %d\nCastigo Bloating: %.2f", 
                     fitFinal, mejorFinal.contarNodos(), mejorFinal.contarNodos() * Evaluador.COEF_BLOATING));
             });

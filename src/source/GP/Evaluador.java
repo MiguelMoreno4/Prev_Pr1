@@ -15,7 +15,7 @@ public class Evaluador {
     
     // Coeficiente para castigar el tamaño del árbol (Bloating)
     // Ajústalo si ves que los árboles crecen demasiado.
-    public static final double COEF_BLOATING = 0.5; 
+    public static double COEF_BLOATING = 0.5; 
 
     /**
      * Coge un árbol AST, lo simula en 3 mapas y devuelve su puntuación final.
@@ -31,7 +31,8 @@ public class Evaluador {
             int tick = 0;
             // El bucle de vida del Rover: Máximo 150 ticks o hasta que muera la batería
             while (tick < MAX_TICKS && !rover.estaApagado()) {
-                
+            	//El rover mira si tiene una muestra en línea recta
+            	rover.escanearVision(mapa);
                 // Leemos el árbol desde la raíz. 
                 // Recordamos que si devuelve 'true' ejecutó algo físico, si devuelve 'false' fue un IF vacío.
                 // En cualquier caso, el tick de reloj pasa.

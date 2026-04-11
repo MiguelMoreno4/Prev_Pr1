@@ -25,9 +25,11 @@ public class PanelGrafica extends JPanel {
     }
 
     public void agregarDatos(double mejorG, double mejorAbs, double mediaGen) {
-        mejorGen.add(mejorG);
-        mejorGlobal.add(mejorAbs);
-        media.add(mediaGen);
+        // Usamos Math.max(0, valor) para que las puntuaciones negativas 
+        // extremas de las primeras generaciones no rompan el escalado del gráfico.
+        mejorGen.add(Math.max(0, mejorG));
+        mejorGlobal.add(Math.max(0, mejorAbs));
+        media.add(Math.max(0, mediaGen));
         repaint();
     }
 
