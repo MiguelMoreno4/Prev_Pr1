@@ -160,9 +160,9 @@ public class VentanaPrincipal extends JFrame {
                 textAreaCodigo.setText("Evolucionando población... Espere.");
                 textPaneReporteFinal.setText("");
                 // OPCIONAL: Si PanelGrafica tiene un método para limpiarse, llámalo aquí.
-                // panelGrafica.limpiar(); 
+                 panelGrafica.limpiar(); 
             });
-
+            
             // 1. Leer Parámetros
             int tPob = (int) spinPob.getValue();
             int tGen = (int) spinGens.getValue();

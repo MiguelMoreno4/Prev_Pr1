@@ -52,7 +52,7 @@ public class PanelMapa extends JPanel {
                     g2.setColor(new Color(200, 50, 50)); // Rojo: pared/muro
                     break;
                 case MUESTRA:
-                    g2.setColor(new Color(50, 200, 50)); // Verde: recompensa/muestra
+                    g2.setColor(new Color(255, 255, 0)); // Verde: recompensa/muestra
                     break;
                 case ARENA:
                     g2.setColor(new Color(255, 140, 0)); // Naranja: arena

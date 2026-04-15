@@ -24,33 +24,32 @@ public class Mapa {
     }
 
     private void generarMapa(long semilla) {
-        // La clave de la práctica: Random con semilla
-        Random rnd = new Random(semilla); 
+        Random rand = new Random(semilla); 
 
-        // 1. Rellenar todo de SUELO inicialmente
-        for (int x = 0; x < COLUMNAS; x++) {
-            for (int y = 0; y < FILAS; y++) {
-                casillas[x][y] = TipoCasilla.SUELO;
+        for (int y = 0; y < FILAS; y++) {       // i = y (Alto)
+            for (int x = 0; x < COLUMNAS; x++) { // j = x (Ancho)
+                
+                // 1. Bordes exteriores
+                if (y == 0 || y == FILAS - 1 || x == 0 || x == COLUMNAS - 1) {
+                    casillas[x][y] = TipoCasilla.MURO;
+                } 
+                // 2. Exactamente tu lógica. El orden del 'rand' es vital aquí.
+                else if (rand.nextDouble() < 0.15 && (y != 1 || x != 1)) {
+                    casillas[x][y] = TipoCasilla.MURO;     // Paredes
+                } 
+                else if (rand.nextDouble() < 0.15 && (y != 1 || x != 1)) {
+                    casillas[x][y] = TipoCasilla.MUESTRA;    // Arena
+                } 
+                else if (rand.nextDouble() < 0.08 && (y != 1 || x != 1)) {
+                    casillas[x][y] = TipoCasilla.ARENA;  // ¡Las monedas/premios!
+                } 
+                else {
+                    // Si no cae en los porcentajes, o si es la casilla (1,1), queda libre
+                    casillas[x][y] = TipoCasilla.SUELO; 
+                }
             }
         }
-
-        // 2. Poner Muros infranqueables en los bordes exteriores
-        for (int i = 0; i < COLUMNAS; i++) {
-            casillas[i][0] = TipoCasilla.MURO;
-            casillas[i][FILAS - 1] = TipoCasilla.MURO;
-            casillas[0][i] = TipoCasilla.MURO;
-            casillas[COLUMNAS - 1][i] = TipoCasilla.MURO;
-        }
-
-        // 3. Despejar la salida: El Rover SIEMPRE sale de (1,1) según el PDF
-        casillas[1][1] = TipoCasilla.SUELO;
-
-        // 4. Colocar obstáculos al azar (si usamos la semilla 3000, siempre caerán en el mismo sitio)
-        colocarElementos(rnd, TipoCasilla.MURO, 15);     // 15 muros internos
-        colocarElementos(rnd, TipoCasilla.ARENA, 20);    // 20 bancos de arena
-        colocarElementos(rnd, TipoCasilla.MUESTRA, 10);  // 10 muestras científicas
     }
-
     private void colocarElementos(Random rnd, TipoCasilla tipo, int cantidad) {
         int colocados = 0;
         while (colocados < cantidad) {
