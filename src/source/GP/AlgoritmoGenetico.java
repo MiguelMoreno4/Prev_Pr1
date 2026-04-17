@@ -13,7 +13,7 @@ public class AlgoritmoGenetico {
     public enum TipoMutacion { SUB_ARBOL, FUNCIONAL, TERMINAL, HOIST, ALEATORIA }
 
     // Ejecuta una generación completa (Población anterior -> Nueva Población)
-    public List<Nodo> evolucionar(List<Nodo> poblacionActual, TipoMutacion tipoMutacion, double probCruce, double probMutacion) {
+    public List<Nodo> evolucionar(List<Nodo> poblacionActual, TipoMutacion tipoMutacion, double probCruce, double probMutacion, double numElite) {
         List<Nodo> nuevaPoblacion = new ArrayList<>();
         int tamano = poblacionActual.size();
 
@@ -23,11 +23,16 @@ public class AlgoritmoGenetico {
             fitnessCache.put(ind, Evaluador.evaluarIndividuo(ind));
         }
 
-        // 1. Elitismo: Le pasamos el caché para que no recalcule nada
-        Nodo mejorGlobal = obtenerMejor(poblacionActual, fitnessCache);
-        nuevaPoblacion.add(mejorGlobal.clonar());
+        // 1. Elitismo: Ordenamos usando el caché y guardamos la cantidad elegida
+        int cantidadElites = (int) numElite; // Convertimos tu double a int por si viene de un JSpinner
+        List<Nodo> poblacionOrdenada = new ArrayList<>(poblacionActual);
+        poblacionOrdenada.sort((a, b) -> Double.compare(fitnessCache.get(b), fitnessCache.get(a)));
 
-        // 2. Generar el resto
+        for (int i = 0; i < cantidadElites && i < tamano; i++) {
+            nuevaPoblacion.add(poblacionOrdenada.get(i).clonar());
+        }
+
+        // 2. Generar el resto (Tu código intacto)
         while (nuevaPoblacion.size() < tamano) {
             // Pasamos el caché a los torneos
             Nodo padre1 = seleccionTorneo(poblacionActual, fitnessCache);
@@ -44,6 +49,7 @@ public class AlgoritmoGenetico {
 
             nuevaPoblacion.add(hijo);
         }
+        
         return nuevaPoblacion;
     }
 

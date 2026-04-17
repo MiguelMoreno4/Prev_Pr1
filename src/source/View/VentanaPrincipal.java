@@ -23,10 +23,10 @@ public class VentanaPrincipal extends JFrame {
     private JPanel contentPane;
     private PanelMapa panelMapa; 
     private PanelGrafica panelGrafica;
-    
+   
     private JButton btnEjecutar;
     // Añadimos spinBloating a la lista
-    private JSpinner spinPob, spinGens, spinCruce, spinMut, spinProfundidad, spinSeed, spinBloating;
+    private JSpinner spinElitismo, spinPob, spinGens, spinCruce, spinMut, spinProfundidad, spinSeed, spinBloating;
     private JComboBox<String> comboMutacionOp;
     
     private JTextArea textAreaCodigo;
@@ -76,7 +76,9 @@ public class VentanaPrincipal extends JFrame {
 
         spinProfundidad = new JSpinner(new SpinnerNumberModel(3, 1, 10, 1));
         spinProfundidad.setPreferredSize(dimSpin);
-
+        
+        spinElitismo = new JSpinner(new SpinnerNumberModel(1, 0, 100, 1));
+        spinElitismo.setPreferredSize(dimSpin);
         // --- NUEVO SPINNER PARA BLOATING ---
         // Valor inicial: 0.5, Mínimo: 0.0, Máximo: 10.0, Paso: 0.1
         spinBloating = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
@@ -95,7 +97,9 @@ public class VentanaPrincipal extends JFrame {
         // Añadimos el componente visual del Bloating
         pnlParams.add(new JLabel("Bloating:")); pnlParams.add(spinBloating);
         pnlParams.add(new JLabel("Tipo Mutación:")); pnlParams.add(comboMutacionOp);
-
+        //elitismo
+        pnlParams.add(new JLabel("Elitismo:"));pnlParams.add(spinElitismo);
+        
         btnEjecutar = new JButton("EJECUTAR");
         btnEjecutar.setPreferredSize(new Dimension(130, 30));
         btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 11));
@@ -169,7 +173,7 @@ public class VentanaPrincipal extends JFrame {
             double pCruce = (int) spinCruce.getValue() / 100.0;
             double pMut = (int) spinMut.getValue() / 100.0;
             int profMax = (int) spinProfundidad.getValue();
-            
+            int numElite = (int) spinElitismo.getValue();
             // --- APLICAMOS EL VALOR DEL BLOATING AL EVALUADOR ---
             Evaluador.COEF_BLOATING = ((Number) spinBloating.getValue()).doubleValue();
             
@@ -192,7 +196,7 @@ public class VentanaPrincipal extends JFrame {
 
             // 3. Bucle Evolutivo
             for (int gen = 0; gen < tGen; gen++) {
-                poblacion = ag.evolucionar(poblacion, tipoMut, pCruce, pMut);
+                poblacion = ag.evolucionar(poblacion, tipoMut, pCruce, pMut,numElite);
                 
                 // Calcular estadísticas para la gráfica
                 double mejorFitGen = Double.NEGATIVE_INFINITY;
