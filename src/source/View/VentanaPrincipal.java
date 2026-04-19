@@ -35,77 +35,79 @@ public class VentanaPrincipal extends JFrame {
     public VentanaPrincipal() {
         setTitle("Misión Rover Marte - Programación Genética");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(50, 50, 1150, 950);
+        setBounds(50, 50, 1150, 810);
 
         contentPane = new JPanel();
         contentPane.setLayout(null);
         setContentPane(contentPane);
-
-        // ===============================
-        // PARAMETROS AG
-        // ===============================
-
-        JPanel pnlParams = new JPanel();
-        pnlParams.setBounds(20, 10, 1090, 65);
-        pnlParams.setBorder(
-                BorderFactory.createTitledBorder(
-                        null, "Configuración del Algoritmo Genético",
-                        TitledBorder.LEADING, TitledBorder.TOP,
-                        new Font("Tahoma", Font.BOLD, 11)
-                )
-        );
-        pnlParams.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 5));
-        contentPane.add(pnlParams);
-
-        Dimension dimSpin = new Dimension(60, 22);
         
-        spinSeed = new JSpinner(new SpinnerNumberModel(3000, 1, 9999999, 1));
-        spinSeed.setPreferredSize(new Dimension(80, 22)); 
-        
-        spinPob = new JSpinner(new SpinnerNumberModel(300, 10, 99999, 10));
-        spinPob.setPreferredSize(dimSpin);
+     // ===============================
+     // PARAMETROS AG (Versión de una sola línea)
+     // ===============================
 
-        spinGens = new JSpinner(new SpinnerNumberModel(300, 1, 99999, 10));
-        spinGens.setPreferredSize(dimSpin);
+     JPanel pnlParams = new JPanel();
 
-        spinCruce = new JSpinner(new SpinnerNumberModel(90, 0, 100, 5));
-        spinCruce.setPreferredSize(dimSpin);
+     pnlParams.setBounds(15, 10, 1110, 65); 
+     pnlParams.setBorder(
+             BorderFactory.createTitledBorder(
+                     null, "Configuración del Algoritmo Genético",
+                     TitledBorder.LEADING, TitledBorder.TOP,
+                     new Font("Tahoma", Font.BOLD, 10)
+             )
+     );
 
-        spinMut = new JSpinner(new SpinnerNumberModel(10, 0, 100, 1));
-        spinMut.setPreferredSize(dimSpin);
+     pnlParams.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 5)); 
+     contentPane.add(pnlParams);
 
-        spinProfundidad = new JSpinner(new SpinnerNumberModel(3, 1, 10, 1));
-        spinProfundidad.setPreferredSize(dimSpin);
-        
-        spinElitismo = new JSpinner(new SpinnerNumberModel(1, 0, 100, 1));
-        spinElitismo.setPreferredSize(dimSpin);
-        // --- NUEVO SPINNER PARA BLOATING ---
-        // Valor inicial: 0.5, Mínimo: 0.0, Máximo: 10.0, Paso: 0.1
-        spinBloating = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
-        spinBloating.setPreferredSize(dimSpin);
+     Dimension dimSpinPequeño = new Dimension(50, 22); 
+     Dimension dimSpinMedio = new Dimension(65, 22);
 
-        comboMutacionOp = new JComboBox<>(new String[]{
-                "Aleatoria (Las 4)", "Hoist (Poda)", "Sub-Árbol", "Funcional", "Terminal"
-        });
-        
-        pnlParams.add(new JLabel("Seed:")); pnlParams.add(spinSeed);
-        pnlParams.add(new JLabel("Población:")); pnlParams.add(spinPob);
-        pnlParams.add(new JLabel("Generaciones:")); pnlParams.add(spinGens);
-        pnlParams.add(new JLabel("Cruce %:")); pnlParams.add(spinCruce);
-        pnlParams.add(new JLabel("Mutación %:")); pnlParams.add(spinMut);
-        pnlParams.add(new JLabel("Profundidad Inicial:")); pnlParams.add(spinProfundidad);
-        // Añadimos el componente visual del Bloating
-        pnlParams.add(new JLabel("Bloating:")); pnlParams.add(spinBloating);
-        pnlParams.add(new JLabel("Tipo Mutación:")); pnlParams.add(comboMutacionOp);
-        //elitismo
-        pnlParams.add(new JLabel("Elitismo:"));pnlParams.add(spinElitismo);
-        
-        btnEjecutar = new JButton("EJECUTAR");
-        btnEjecutar.setPreferredSize(new Dimension(130, 30));
-        btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 11));
-        btnEjecutar.setBackground(new Color(39, 174, 96));
-        btnEjecutar.setForeground(Color.WHITE);
-        pnlParams.add(btnEjecutar);
+     spinSeed = new JSpinner(new SpinnerNumberModel(3000, 1, 9999999, 1));
+     spinSeed.setPreferredSize(new Dimension(75, 22)); 
+
+     spinPob = new JSpinner(new SpinnerNumberModel(300, 10, 99999, 10));
+     spinPob.setPreferredSize(dimSpinMedio);
+
+     spinGens = new JSpinner(new SpinnerNumberModel(300, 1, 99999, 10));
+     spinGens.setPreferredSize(dimSpinMedio);
+
+     spinCruce = new JSpinner(new SpinnerNumberModel(90, 0, 100, 5));
+     spinCruce.setPreferredSize(dimSpinPequeño);
+
+     spinMut = new JSpinner(new SpinnerNumberModel(10, 0, 100, 1));
+     spinMut.setPreferredSize(dimSpinPequeño);
+
+     spinProfundidad = new JSpinner(new SpinnerNumberModel(3, 1, 10, 1));
+     spinProfundidad.setPreferredSize(dimSpinPequeño);
+
+     spinElitismo = new JSpinner(new SpinnerNumberModel(1, 0, 100, 1));
+     spinElitismo.setPreferredSize(dimSpinPequeño);
+
+     spinBloating = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
+     spinBloating.setPreferredSize(dimSpinPequeño);
+
+     comboMutacionOp = new JComboBox<>(new String[]{
+             "Aleatoria", "Hoist", "Sub-Árbol", "Funcional", "Terminal" // 
+     });
+     comboMutacionOp.setPreferredSize(new Dimension(90, 22));
+
+     // Añadir todo al panel (usando etiquetas más cortas donde sea posible)
+     pnlParams.add(new JLabel("Seed:")); pnlParams.add(spinSeed);
+     pnlParams.add(new JLabel("Pob:")); pnlParams.add(spinPob);
+     pnlParams.add(new JLabel("Gen:")); pnlParams.add(spinGens);
+     pnlParams.add(new JLabel("Cr%:")); pnlParams.add(spinCruce);
+     pnlParams.add(new JLabel("Mu%:")); pnlParams.add(spinMut);
+     pnlParams.add(new JLabel("Prof:")); pnlParams.add(spinProfundidad);
+     pnlParams.add(new JLabel("Bloat:")); pnlParams.add(spinBloating);
+     pnlParams.add(new JLabel("Mut:")); pnlParams.add(comboMutacionOp);
+     pnlParams.add(new JLabel("Eli:")); pnlParams.add(spinElitismo);
+
+     btnEjecutar = new JButton("EJECUTAR");
+     btnEjecutar.setPreferredSize(new Dimension(100, 25)); // Botón un poco más estrecho
+     btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 10));
+     btnEjecutar.setBackground(new Color(39, 174, 96));
+     btnEjecutar.setForeground(Color.WHITE);
+     pnlParams.add(btnEjecutar);
 
         // ===============================
         // MAPA
@@ -147,7 +149,7 @@ public class VentanaPrincipal extends JFrame {
         // ===============================
 
         panelGrafica = new PanelGrafica(); 
-        panelGrafica.setBounds(20, 620, 1090, 280);
+        panelGrafica.setBounds(20, 620, 1090, 140);
         panelGrafica.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         contentPane.add(panelGrafica);
 
