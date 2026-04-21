@@ -10,8 +10,8 @@ import java.util.Random;
 public class AlgoritmoGenetico {
     
     private Random rnd = new Random();
-    public enum TipoMutacion { SUB_ARBOL, FUNCIONAL, TERMINAL, HOIST, ALEATORIA }
-
+     public enum TipoMutacion { ALEATORIA,HOIST, SUB_ARBOL, FUNCIONAL, TERMINAL,   }
+     
     // Ejecuta una generación completa (Población anterior -> Nueva Población)
     public List<Nodo> evolucionar(List<Nodo> poblacionActual, TipoMutacion tipoMutacion, double probCruce, double probMutacion, double numElite) {
         List<Nodo> nuevaPoblacion = new ArrayList<>();
@@ -143,54 +143,50 @@ public class AlgoritmoGenetico {
         return raizActual;
     }
 
-    // =========================================================
-    // MUTACIONES (Tus reglas originales)
-    // =========================================================
     private Nodo aplicarMutacion(Nodo hijo, TipoMutacion tipo) {
-        if (tipo == TipoMutacion.ALEATORIA) {
-            tipo = TipoMutacion.values()[rnd.nextInt(4)]; 
-        }
-
-        switch (tipo) {
-            case HOIST: 
-                List<NodoBloque> bloques = obtenerTodosLosBloques(hijo);
-                if (bloques.size() > 1) {
-                    return bloques.get(1 + rnd.nextInt(bloques.size() - 1)).clonar();
-                }
-                break;
-
-            case SUB_ARBOL: 
-                List<NodoBloque> blq = obtenerTodosLosBloques(hijo);
-                if (!blq.isEmpty()) {
-                    NodoBloque b = blq.get(rnd.nextInt(blq.size()));
-                    if (!b.hijos.isEmpty()) {
-                        int idx = rnd.nextInt(b.hijos.size());
-                        b.hijos.set(idx, GeneradorAST.crearArbolAleatorio(0, 3));
-                    }
-                }
-                break;
-
-            case FUNCIONAL: 
-                List<NodoCondicional> condicionales = obtenerTodosLosIF(hijo);
-                if (!condicionales.isEmpty()) {
-                    NodoCondicional c = condicionales.get(rnd.nextInt(condicionales.size()));
-                    int r = rnd.nextInt(3);
-                    if (r == 0) c.sensor = TipoSensor.values()[rnd.nextInt(TipoSensor.values().length)];
-                    else if (r == 1) c.operador = Operador.values()[rnd.nextInt(Operador.values().length)];
-                    else c.umbral = 10 + rnd.nextInt(90);
-                }
-                break;
-
-            case TERMINAL: 
-                List<NodoAccion> terminales = obtenerTodasLasAcciones(hijo);
-                if (!terminales.isEmpty()) {
-                    NodoAccion a = terminales.get(rnd.nextInt(terminales.size()));
-                    a.accion = TipoAccion.values()[rnd.nextInt(TipoAccion.values().length)];
-                }
-                break;
-        }
-        return hijo;
-    }
+	    if (tipo == TipoMutacion.ALEATORIA) {
+	        tipo = TipoMutacion.values()[rnd.nextInt(4)]; 
+	    }
+	
+	    switch (tipo) {
+	        case HOIST: 
+	            List<NodoBloque> bloques = obtenerTodosLosBloques(hijo);
+	            if (bloques.size() > 1) {
+	                return bloques.get(1 + rnd.nextInt(bloques.size() - 1)).clonar();
+	            }
+	            break;
+	
+	        case SUB_ARBOL: 
+	         // 1. Elegimos cualquier nodo del árbol al azar (puede ser Acción, IF o Bloque)
+	            Nodo nodoAfectado = seleccionarNodoAlAzar(hijo);
+	            
+	            // 2. Generamos la nueva rama aleatoria
+	            Nodo ramaNueva = GeneradorAST.crearArbolAleatorio(0, 3);
+	            
+	            // 3. Sustituimos el nodo original por la nueva rama usando tu método existente
+	            return sustituirNodo(hijo, nodoAfectado, ramaNueva);
+	            
+		case FUNCIONAL: 
+	            List<NodoCondicional> condicionales = obtenerTodosLosIF(hijo);
+	            if (!condicionales.isEmpty()) {
+	                NodoCondicional c = condicionales.get(rnd.nextInt(condicionales.size()));
+	                int r = rnd.nextInt(3);
+	                if (r == 0) c.sensor = TipoSensor.values()[rnd.nextInt(TipoSensor.values().length)];
+	                else if (r == 1) c.operador = Operador.values()[rnd.nextInt(Operador.values().length)];
+	                else c.umbral = 10 + rnd.nextInt(90);
+	            }
+	            break;
+	
+	        case TERMINAL: 
+	            List<NodoAccion> terminales = obtenerTodasLasAcciones(hijo);
+	            if (!terminales.isEmpty()) {
+	                NodoAccion a = terminales.get(rnd.nextInt(terminales.size()));
+	                a.accion = TipoAccion.values()[rnd.nextInt(TipoAccion.values().length)];
+	            }
+	            break;
+	    }
+	    return hijo;
+	}
 
     // --- MÉTODOS AUXILIARES ORIGINALES ---
     private List<NodoBloque> obtenerTodosLosBloques(Nodo n) {

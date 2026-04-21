@@ -184,7 +184,7 @@ public class VentanaPrincipal extends JFrame {
             GeneradorAST.rnd.setSeed(semilla); // <--- IMPORTANTE: Aplicar la semilla
             
             int mutIdx = comboMutacionOp.getSelectedIndex();
-            AlgoritmoGenetico.TipoMutacion tipoMut = mutIdx == 0 ? AlgoritmoGenetico.TipoMutacion.ALEATORIA : AlgoritmoGenetico.TipoMutacion.values()[mutIdx - 1];
+            AlgoritmoGenetico.TipoMutacion tipoMut = mutIdx == 0 ? AlgoritmoGenetico.TipoMutacion.ALEATORIA : AlgoritmoGenetico.TipoMutacion.values()[mutIdx];
 
             AlgoritmoGenetico ag = new AlgoritmoGenetico();
             List<Nodo> poblacion = new ArrayList<>(); // <-- CAMBIO A NODO
