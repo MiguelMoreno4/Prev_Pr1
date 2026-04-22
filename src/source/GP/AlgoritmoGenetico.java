@@ -12,12 +12,13 @@ public class AlgoritmoGenetico {
     private Random rnd = new Random();
      public enum TipoMutacion { ALEATORIA,HOIST, SUB_ARBOL, FUNCIONAL, TERMINAL,   }
      
-    // Ejecuta una generación completa (Población anterior -> Nueva Población)
-    public List<Nodo> evolucionar(List<Nodo> poblacionActual, TipoMutacion tipoMutacion, double probCruce, double probMutacion, double numElite) {
+    // Ejecuta una generación completa 
+    public List<Nodo> evolucionar(List<Nodo> poblacionActual, TipoMutacion tipoMutacion, double probCruce, double probMutacion, double numElite
+    		,String tipoSeleccion) {
         List<Nodo> nuevaPoblacion = new ArrayList<>();
         int tamano = poblacionActual.size();
-
-        // 🌟 OPTIMIZACIÓN: Calculamos el fitness de todos UNA SOLA VEZ
+        Selector selector=new Selector();
+        //Calculamos el fitness de todos 
         Map<Nodo, Double> fitnessCache = new HashMap<>();
         for (Nodo ind : poblacionActual) {
             fitnessCache.put(ind, Evaluador.evaluarIndividuo(ind));
@@ -32,17 +33,16 @@ public class AlgoritmoGenetico {
             nuevaPoblacion.add(poblacionOrdenada.get(i).clonar());
         }
 
-        // 2. Generar el resto (Tu código intacto)
+        // 2. Generar el resto 
         while (nuevaPoblacion.size() < tamano) {
-            // Pasamos el caché a los torneos
-            Nodo padre1 = seleccionTorneo(poblacionActual, fitnessCache);
+        	Nodo padre1 = selector.seleccionar(poblacionActual, tipoSeleccion, fitnessCache);
             Nodo hijo = padre1.clonar(); 
 
             if (rnd.nextDouble() < probCruce) {
-                Nodo padre2 = seleccionTorneo(poblacionActual, fitnessCache);
+                Nodo padre2 = selector.seleccionar(poblacionActual, tipoSeleccion, fitnessCache);
                 hijo = crucePorSubArbol(hijo, padre2); 
             }
-
+            
             if (rnd.nextDouble() < probMutacion) {
                 hijo = aplicarMutacion(hijo, tipoMutacion);
             }
@@ -53,42 +53,12 @@ public class AlgoritmoGenetico {
         return nuevaPoblacion;
     }
 
-    // Fíjate en cómo los métodos auxiliares ahora leen del Map de forma instantánea:
-
-    private Nodo seleccionTorneo(List<Nodo> poblacion, Map<Nodo, Double> cache) {
-        Nodo mejor = poblacion.get(rnd.nextInt(poblacion.size()));
-        double mejorFitness = cache.get(mejor); // <--- LECTURA INSTANTÁNEA
-
-        for (int i = 0; i < 2; i++) { 
-            Nodo contendiente = poblacion.get(rnd.nextInt(poblacion.size()));
-            double fitContendiente = cache.get(contendiente); // <--- LECTURA INSTANTÁNEA
-            
-            if (fitContendiente > mejorFitness) {
-                mejor = contendiente;
-                mejorFitness = fitContendiente;
-            }
-        }
-        return mejor;
-    }
-
-    private Nodo obtenerMejor(List<Nodo> poblacion, Map<Nodo, Double> cache) {
-        Nodo mejor = poblacion.get(0);
-        double mejorF = cache.get(mejor);
-        
-        for (Nodo ind : poblacion) {
-            double f = cache.get(ind);
-            if (f > mejorF) { 
-                mejor = ind; 
-                mejorF = f; 
-            }
-        }
-        return mejor;
-    }
+  
 
    
 
     // =========================================================
-    // CRUCE (Intercambio de sub-árboles avanzado)
+    // CRUCE (Intercambio de sub-árboles)
     // =========================================================
     private Nodo crucePorSubArbol(Nodo hijo1, Nodo padre2) {
         // Seleccionamos un punto de cruce al azar en ambos árboles

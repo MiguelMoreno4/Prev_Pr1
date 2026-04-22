@@ -13,7 +13,6 @@ public class NodoAccion implements Nodo {
     @Override
     public boolean ejecutar(Rover rover, Mapa mapa) {
         // 1. Ejecutamos la acción física. 
-        // ¡Tu clase Rover ya gestiona internamente la batería y el mareo aquí!
         switch (accion) {
             case AVANZAR: 
                 rover.avanzar(mapa); 

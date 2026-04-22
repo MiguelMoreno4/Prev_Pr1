@@ -29,9 +29,14 @@ public class VentanaPrincipal extends JFrame {
     private JSpinner spinElitismo, spinPob, spinGens, spinCruce, spinMut, spinProfundidad, spinSeed, spinBloating;
     private JComboBox<String> comboMutacionOp;
     
+    String[] metodosSeleccion = {"TORNEO", "RULETA", "ESTOCASTICO", "RESTOS", "RANKING", "TRUNCAMIENTO"};
+    JComboBox<String> comboSeleccion = new JComboBox<>(metodosSeleccion);
+    
     private JTextArea textAreaCodigo;
     private JTextPane textPaneReporteFinal;
 
+    private JLabel lblMuestras;//muestra el nº total de muestras recogidas
+    
     public VentanaPrincipal() {
         setTitle("Misión Rover Marte - Programación Genética");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,7 +47,7 @@ public class VentanaPrincipal extends JFrame {
         setContentPane(contentPane);
         
      // ===============================
-     // PARAMETROS AG (Versión de una sola línea)
+     // PARAMETROS AG
      // ===============================
 
      JPanel pnlParams = new JPanel();
@@ -90,8 +95,11 @@ public class VentanaPrincipal extends JFrame {
              "Aleatoria", "Hoist", "Sub-Árbol", "Funcional", "Terminal" // 
      });
      comboMutacionOp.setPreferredSize(new Dimension(90, 22));
-
-     // Añadir todo al panel (usando etiquetas más cortas donde sea posible)
+     
+     lblMuestras = new JLabel("Muestras recogidas: 0");
+     lblMuestras.setFont(new Font("Arial", Font.BOLD, 14));
+     
+     // Añadir todo al panel 
      pnlParams.add(new JLabel("Seed:")); pnlParams.add(spinSeed);
      pnlParams.add(new JLabel("Pob:")); pnlParams.add(spinPob);
      pnlParams.add(new JLabel("Gen:")); pnlParams.add(spinGens);
@@ -101,14 +109,16 @@ public class VentanaPrincipal extends JFrame {
      pnlParams.add(new JLabel("Bloat:")); pnlParams.add(spinBloating);
      pnlParams.add(new JLabel("Mut:")); pnlParams.add(comboMutacionOp);
      pnlParams.add(new JLabel("Eli:")); pnlParams.add(spinElitismo);
-
+     pnlParams.add(new JLabel("Metodos seleccion:")); pnlParams.add(comboSeleccion);
+    
+     
      btnEjecutar = new JButton("EJECUTAR");
      btnEjecutar.setPreferredSize(new Dimension(100, 25)); // Botón un poco más estrecho
      btnEjecutar.setFont(new Font("Tahoma", Font.BOLD, 10));
      btnEjecutar.setBackground(new Color(39, 174, 96));
      btnEjecutar.setForeground(Color.WHITE);
      pnlParams.add(btnEjecutar);
-
+     pnlParams.add(lblMuestras);
         // ===============================
         // MAPA
         // ===============================
@@ -130,7 +140,7 @@ public class VentanaPrincipal extends JFrame {
         scrollReporte.setBounds(555, 90, 555, 100);
         scrollReporte.setBorder(BorderFactory.createTitledBorder("Estadísticas del Mejor Individuo"));
         contentPane.add(scrollReporte);
-
+      
         // ===============================
         // CÓDIGO GENERADO (AST)
         // ===============================
@@ -165,8 +175,7 @@ public class VentanaPrincipal extends JFrame {
                 btnEjecutar.setEnabled(false);
                 textAreaCodigo.setText("Evolucionando población... Espere.");
                 textPaneReporteFinal.setText("");
-                // OPCIONAL: Si PanelGrafica tiene un método para limpiarse, llámalo aquí.
-                 panelGrafica.limpiar(); 
+                panelGrafica.limpiar(); 
             });
             
             // 1. Leer Parámetros
@@ -176,29 +185,30 @@ public class VentanaPrincipal extends JFrame {
             double pMut = (int) spinMut.getValue() / 100.0;
             int profMax = (int) spinProfundidad.getValue();
             int numElite = (int) spinElitismo.getValue();
+            String metodoSeleccion=(String) comboSeleccion.getSelectedItem();
             // --- APLICAMOS EL VALOR DEL BLOATING AL EVALUADOR ---
             Evaluador.COEF_BLOATING = ((Number) spinBloating.getValue()).doubleValue();
             
-            // Leer la semilla (Si luego la vas a usar en el evaluador o Generador)
+            // Lee la semilla y aplica 
             long semilla = ((Number) spinSeed.getValue()).longValue();
-            GeneradorAST.rnd.setSeed(semilla); // <--- IMPORTANTE: Aplicar la semilla
+            GeneradorAST.rnd.setSeed(semilla);
             
             int mutIdx = comboMutacionOp.getSelectedIndex();
             AlgoritmoGenetico.TipoMutacion tipoMut = mutIdx == 0 ? AlgoritmoGenetico.TipoMutacion.ALEATORIA : AlgoritmoGenetico.TipoMutacion.values()[mutIdx];
 
             AlgoritmoGenetico ag = new AlgoritmoGenetico();
-            List<Nodo> poblacion = new ArrayList<>(); // <-- CAMBIO A NODO
+            List<Nodo> poblacion = new ArrayList<>(); 
 
          // 2. Población Inicial
             poblacion = GeneradorAST.inicializarPoblacion(tPob, 2, profMax);
 
-            // 🌟 VARIABLES PARA EL MEJOR HISTÓRICO 
+            //Inicializa las variables del mejor absoluto
             Nodo mejorNodoAbsoluto = poblacion.get(0);
             double mejorFitnessAbsoluto = Double.NEGATIVE_INFINITY;
 
             // 3. Bucle Evolutivo
             for (int gen = 0; gen < tGen; gen++) {
-                poblacion = ag.evolucionar(poblacion, tipoMut, pCruce, pMut,numElite);
+                poblacion = ag.evolucionar(poblacion, tipoMut, pCruce, pMut,numElite, metodoSeleccion);
                 
                 // Calcular estadísticas para la gráfica
                 double mejorFitGen = Double.NEGATIVE_INFINITY;
@@ -208,12 +218,12 @@ public class VentanaPrincipal extends JFrame {
                     double fit = Evaluador.evaluarIndividuo(ind);
                     sumaFit += fit;
                     
-                    // Mejor de esta generación en concreto
+                    // Mejor de esta generación 
                     if (fit > mejorFitGen) {
                         mejorFitGen = fit;
                     }
                     
-                    // 🌟 Mejor de TODA la ejecución (Lo guardamos al vuelo)
+                    // Guarda el mejor absoluto
                     if (fit > mejorFitnessAbsoluto) {
                         mejorFitnessAbsoluto = fit;
                         mejorNodoAbsoluto = ind.clonar(); // Clonamos por seguridad
@@ -227,11 +237,11 @@ public class VentanaPrincipal extends JFrame {
                 final double mAbs = mejorFitnessAbsoluto;
                 final double mMed = mediaFit;
                 
-                // ¡Corregido! Pasamos las 3 notas (Gen, Absoluta, Media)
+                // Pasamos las 3 graficas (Gen, Absoluta, Media)
                 SwingUtilities.invokeLater(() -> panelGrafica.agregarDatos(mG, mAbs, mMed));
             }
 
-            // 4. Fin de la Evolución: ¡Ya tenemos al mejor global extraído!
+            // 4. Fin de la Evolución
             final Nodo mejorFinal = mejorNodoAbsoluto;
             final double fitFinal = mejorFitnessAbsoluto;
 
@@ -241,7 +251,7 @@ public class VentanaPrincipal extends JFrame {
                 textPaneReporteFinal.setText(String.format("Fitness Final: %.2f\nTamaño del Árbol (Nodos): %d\nCastigo Bloating: %.2f", 
                     fitFinal, mejorFinal.contarNodos(), mejorFinal.contarNodos() * Evaluador.COEF_BLOATING));
             });
-
+            
             // 6. Simular visualmente al mejor individuo en el mapa
             simularMejorRover(mejorFinal, semilla); // Le paso la semilla a la simulación
 
@@ -264,7 +274,7 @@ public class VentanaPrincipal extends JFrame {
             
             // Mandamos a repintar el mapa
             SwingUtilities.invokeLater(() -> panelMapa.actualizar(mapaSim, roverSim));
-            
+            lblMuestras.setText("Muestras recogidas: " + roverSim.muestrasRecolectadas);;
             // Pausa de 150ms para que el ojo humano pueda ver el movimiento
             try { Thread.sleep(150); } catch (InterruptedException e) {}
         }

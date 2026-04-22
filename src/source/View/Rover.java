@@ -6,7 +6,7 @@ public class Rover {
     public int y;
     public Direccion orientacion;
     public int bateria;
-
+    
     // Estadísticas para calcular el Fitness (Según PDF)
     public int muestrasRecolectadas = 0;
     public int casillasExploradas = 0;
@@ -19,8 +19,8 @@ public class Rover {
     private boolean[][] mapaExplorado;
 
     public Rover() {
-        this.x = 1; // Fila 1 según PDF
-        this.y = 1; // Columna 1 según PDF
+        this.x = 1; // Fila 1 
+        this.y = 1; // Columna 1 
         this.orientacion = Direccion.ESTE; // Orientado al Este
         this.bateria = 100; // Energía inicial
         
@@ -97,7 +97,7 @@ public class Rover {
         return bateria <= 0;
     }
 
-    // Aplica la fórmula exacta de la página 3 del enunciado
+    // Aplica la fórmula exacta del enunciado
     public double calcularFitnessBase() {
         double fitness = (muestrasRecolectadas * 500) 
                        + (casillasExploradas * 20) 
@@ -149,4 +149,11 @@ public class Rover {
 		// TODO Auto-generated method stub
 		return this.orientacion;
 	}
+	public boolean haVisitado(int x, int y) {
+        // Comprobación de seguridad por si sale de los límites
+        if (x >= 0 && x < Mapa.COLUMNAS && y >= 0 && y < Mapa.FILAS) {
+            return mapaExplorado[x][y];
+        }
+        return false;
+    }
 }

@@ -3,11 +3,11 @@ package source.View;
 import java.util.Random;
 
 public class Mapa {
-    // El enunciado exige estrictamente 15x15
+    
     public static final int FILAS = 15;
     public static final int COLUMNAS = 15;
 
-    // Sustituimos las matrices de números por un enumerado claro
+    
     public enum TipoCasilla {
         SUELO,    // Gris oscuro (Libre)
         MURO,     // Rojo oscuro (Obstáculo)
@@ -17,7 +17,7 @@ public class Mapa {
 
     public TipoCasilla[][] casillas;
 
-    // Ya no hay "Escenarios", solo le pasamos una semilla (ej: 3000)
+    
     public Mapa(long semilla) {
         casillas = new TipoCasilla[COLUMNAS][FILAS];
         generarMapa(semilla);
@@ -29,11 +29,11 @@ public class Mapa {
         for (int y = 0; y < FILAS; y++) {       // i = y (Alto)
             for (int x = 0; x < COLUMNAS; x++) { // j = x (Ancho)
                 
-                // 1. Bordes exteriores
+               
                 if (y == 0 || y == FILAS - 1 || x == 0 || x == COLUMNAS - 1) {
-                    casillas[x][y] = TipoCasilla.MURO;
+                    casillas[x][y] = TipoCasilla.MURO;//Muros bordes
                 } 
-                // 2. Exactamente tu lógica. El orden del 'rand' es vital aquí.
+                
                 else if (rand.nextDouble() < 0.15 && (y != 1 || x != 1)) {
                     casillas[x][y] = TipoCasilla.MURO;     // Paredes
                 } 
@@ -41,7 +41,7 @@ public class Mapa {
                     casillas[x][y] = TipoCasilla.MUESTRA;    // Arena
                 } 
                 else if (rand.nextDouble() < 0.08 && (y != 1 || x != 1)) {
-                    casillas[x][y] = TipoCasilla.ARENA;  // ¡Las monedas/premios!
+                    casillas[x][y] = TipoCasilla.ARENA;  // Muestras
                 } 
                 else {
                     // Si no cae en los porcentajes, o si es la casilla (1,1), queda libre
@@ -50,19 +50,7 @@ public class Mapa {
             }
         }
     }
-    private void colocarElementos(Random rnd, TipoCasilla tipo, int cantidad) {
-        int colocados = 0;
-        while (colocados < cantidad) {
-            int x = rnd.nextInt(COLUMNAS);
-            int y = rnd.nextInt(FILAS);
-            
-            // Solo lo colocamos si es suelo y no tapamos la salida (1,1)
-            if (casillas[x][y] == TipoCasilla.SUELO && !(x == 1 && y == 1)) {
-                casillas[x][y] = tipo;
-                colocados++;
-            }
-        }
-    }
+  
 
     // --- MÉTODOS ÚTILES PARA EL ROVER ---
 

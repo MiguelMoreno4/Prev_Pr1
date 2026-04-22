@@ -9,7 +9,7 @@ public class Evaluador {
     // Reglas estrictas del PDF
     public static final int MAX_TICKS = 150;
     
-    // Semillas para los 3 escenarios. El PDF exige la 3000. 
+    // Semillas para los 3 escenarios. 
     // Usamos la 3000, 3001 y 3002 para que el fitness sea robusto.
     public static final long[] SEMILLAS = {3000, 3001, 3002}; 
     

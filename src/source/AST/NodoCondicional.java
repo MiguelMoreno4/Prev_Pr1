@@ -8,7 +8,7 @@ public class NodoCondicional implements Nodo {
     public Operador operador;
     public int umbral;
     
-    // Ahora las ramas son de tipo Nodo
+
     public Nodo ramaIf;
     public Nodo ramaElse; 
 

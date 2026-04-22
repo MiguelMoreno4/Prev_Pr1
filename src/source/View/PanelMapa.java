@@ -12,7 +12,7 @@ public class PanelMapa extends JPanel {
         setBackground(Color.WHITE);
     }
 
-    // Este método lo llama la VentanaPrincipal en el bucle de simulación
+    
     public void actualizar(Mapa mapa, Rover rover) {
         this.mapaActual = mapa;
         this.roverActual = rover;
@@ -59,7 +59,12 @@ public class PanelMapa extends JPanel {
                     break;
                 case SUELO:
                 default:
-                    g2.setColor(new Color(100, 100, 100)); // Gris oscuro: libre/suelo
+                	if (roverActual.haVisitado(x, y)) {
+                        g2.setColor(new Color(150, 200, 255)); // Azul clarito: rastro (suelo pisado)
+                    } else {
+                        g2.setColor(new Color(100, 100, 100)); // Gris oscuro: libre/suelo virgen
+                    }
+                 
                     break;
             }
 

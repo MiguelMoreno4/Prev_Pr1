@@ -10,7 +10,7 @@ public class GeneradorAST {
     public static final Random rnd = new Random();
 
     // =========================================================
-    // 1. INICIALIZACIÓN RAMPED HALF-AND-HALF (NUEVO)
+    // 1. INICIALIZACIÓN RAMPED HALF-AND-HALF 
     // =========================================================
     public static List<Nodo> inicializarPoblacion(int tamanoPob, int profMin, int profMax) {
         List<Nodo> poblacion = new ArrayList<>();
@@ -90,20 +90,20 @@ public class GeneradorAST {
         }
     }
 
-    // =========================================================
-    // 4. MÉTODOS AUXILIARES Y COMPATIBILIDAD CON TU CÓDIGO
-    // =========================================================
+    // =======================
+    // 4. MÉTODOS AUXILIARES
+    // =======================
     
     // Mantenemos tu método original intacto por si las Mutaciones lo usan
     public static Nodo crearArbolAleatorio(int profundidadActual, int profundidadMax) {
-        // Tu método original es matemáticamente idéntico a un crecimiento tipo "Grow"
+        
         return generarArbolGrow(profundidadActual, profundidadMax);
     }
 
-    // TU CÓDIGO ORIGINAL: Respetando las probabilidades 50%, 25%, 25%
+    // 
     public static Nodo generarTerminal() {
         int r = rnd.nextInt(4); // 0, 1, 2, 3
-        if (r < 2) {
+        if (r < 2) {//da el doble de probabilidad a avanzar frente a girar
             return new NodoAccion(TipoAccion.AVANZAR); 
         } else if (r == 2) {
             return new NodoAccion(TipoAccion.GIRAR_IZQ); 
